@@ -1,3 +1,7 @@
+## This fork is just a merge of yarik's and hashblen's work for genshin 4.6+ and zzz support respectively, the point of this is just to have both in one single asset studio. if fixes are made here, they'll probably be pushed to their respective fork at some point
+
+---
+
 # Studio
 Check out the [original AssetStudio project](https://github.com/Perfare/AssetStudio) for more information.
 
