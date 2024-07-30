@@ -1,4 +1,4 @@
-## This fork is just a merge of yarik's and hashblen's work for genshin 4.6+ and zzz support (only textures for now) respectively, the point of this is just to have both in one single asset studio. if fixes are made here, they'll probably be pushed to their respective fork at some point
+## This fork is just a merge of yarik's and hashblen's work for gi 4.6+ and zzz support (only textures for now) respectively, the point of this is just to have both in one single asset studio. if fixes are made here, they'll probably be pushed to their respective fork at some point
 
 ---
 
