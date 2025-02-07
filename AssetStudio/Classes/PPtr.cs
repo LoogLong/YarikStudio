@@ -62,7 +62,7 @@ namespace AssetStudio
                     }
                 }
 
-                if (index >= 0)
+                if (index >= 0 && index < assetsFileList.Count)
                 {
                     result = assetsFileList[index];
                     return true;

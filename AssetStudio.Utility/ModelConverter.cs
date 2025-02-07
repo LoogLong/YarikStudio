@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 
@@ -17,12 +18,54 @@ namespace AssetStudio
 
         private Options options;
         private Avatar avatar;
-        private HashSet<AnimationClip> animationClipHashSet = new HashSet<AnimationClip>();
+        public HashSet<AnimationClip> animationClipHashSet = new HashSet<AnimationClip>();
         private Dictionary<AnimationClip, string> boundAnimationPathDic = new Dictionary<AnimationClip, string>();
         private Dictionary<uint, string> bonePathHash = new Dictionary<uint, string>();
         private Dictionary<Texture2D, string> textureNameDictionary = new Dictionary<Texture2D, string>();
         private Dictionary<Transform, ImportedFrame> transformDictionary = new Dictionary<Transform, ImportedFrame>();
         Dictionary<uint, string> morphChannelNames = new Dictionary<uint, string>();
+
+        public ModelConverter(GameObject rootGameObject, Options options, AnimationClip[] animationList, Mesh[] meshList, Avatar avatar)
+        {
+            this.options = options;
+            this.avatar = avatar;
+
+            InitWithGameObject(rootGameObject);
+
+            if (animationList != null)
+            {
+                foreach (var animationClip in animationList)
+                {
+                    animationClipHashSet.Add(animationClip);
+                }
+            }
+        }
+
+        public ModelConverter(string rootName, List<GameObject> m_GameObjects, Options options, AnimationClip[] animationList, Mesh[] meshList)
+        {
+            this.options = options;
+
+            RootFrame = CreateFrame(rootName, Vector3.Zero, new Quaternion(0, 0, 0, 0), Vector3.One);
+            foreach (var gameObject in m_GameObjects)
+            {
+                var m_Transform = gameObject.m_Transform;
+                ConvertTransforms(m_Transform, RootFrame);
+                CreateBonePathHash(m_Transform);
+            }
+            foreach (var m_GameObject in m_GameObjects)
+            {
+                var m_Transform = m_GameObject.m_Transform;
+                ConvertMeshRenderer(m_Transform);
+            }
+            if (animationList != null)
+            {
+                foreach (var animationClip in animationList)
+                {
+                    animationClipHashSet.Add(animationClip);
+                }
+            }
+            ConvertAnimations();
+        }
 
         public ModelConverter(GameObject m_GameObject, Options options, AnimationClip[] animationList = null)
         {
@@ -153,21 +196,21 @@ namespace AssetStudio
 
         private void ConvertMeshRenderer(Transform m_Transform)
         {
-            m_Transform.m_GameObject.TryGet(out var m_GameObject);
+            m_Transform.m_GameObject.TryGet(out var gameObject);
 
-            if (m_GameObject.m_MeshRenderer != null)
+            if (gameObject.m_MeshRenderer != null)
             {
-                ConvertMeshRenderer(m_GameObject.m_MeshRenderer);
+                ConvertMeshRenderer(gameObject.m_MeshRenderer);
             }
 
-            if (m_GameObject.m_SkinnedMeshRenderer != null)
+            if (gameObject.m_SkinnedMeshRenderer != null)
             {
-                ConvertMeshRenderer(m_GameObject.m_SkinnedMeshRenderer);
+                ConvertMeshRenderer(gameObject.m_SkinnedMeshRenderer);
             }
 
-            if (m_GameObject.m_Animation != null)
+            if (gameObject.m_Animation != null)
             {
-                foreach (var animation in m_GameObject.m_Animation.m_Animations)
+                foreach (var animation in gameObject.m_Animation.m_Animations)
                 {
                     if (animation.TryGet(out var animationClip))
                     {
@@ -178,6 +221,10 @@ namespace AssetStudio
                         animationClipHashSet.Add(animationClip);
                     }
                 }
+            }
+            if (gameObject.m_Animator != null)
+            {
+                CollectAnimationClip(gameObject.m_Animator);
             }
 
             foreach (var pptr in m_Transform.m_Children)
@@ -905,6 +952,12 @@ namespace AssetStudio
                     var m_ClipBindingConstant = animationClip.m_ClipBindingConstant ?? m_Clip.ConvertValueArrayToGenericBinding();
                     var m_ACLClip = m_Clip.m_ACLClip;
                     var aclCount = m_ACLClip.CurveCount;
+                    List<string> strings = new();
+                    foreach (var binding in m_ClipBindingConstant.genericBindings)
+                    {
+                        var path = FixBonePath(GetPathFromHash(binding.path));
+                        strings.Add(path);
+                    }
                     if (m_ACLClip.IsSet && !options.game.Type.IsSRGroup())
                     {
                         m_ACLClip.Process(options.game, out var values, out var times);
@@ -1013,6 +1066,10 @@ namespace AssetStudio
             else if (binding.typeID == ClassIDType.Transform)
             {
                 var path = FixBonePath(GetPathFromHash(binding.path));
+                if (path == null)
+                {
+                    var pd = 1;
+                }
                 var track = iAnim.FindTrack(path);
 
                 switch (binding.attribute)
@@ -1064,14 +1121,18 @@ namespace AssetStudio
 
         private string GetPathFromHash(uint hash)
         {
-            bonePathHash.TryGetValue(hash, out var boneName);
+            var boneName = avatar?.FindBonePath(hash);
             if (string.IsNullOrEmpty(boneName))
             {
-                boneName = avatar?.FindBonePath(hash);
+                bonePathHash.TryGetValue(hash, out boneName);
             }
             if (string.IsNullOrEmpty(boneName))
             {
                 boneName = "unknown " + hash;
+            }
+            else
+            {
+                var d = 1;
             }
             return boneName;
         }

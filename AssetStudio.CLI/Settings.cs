@@ -56,9 +56,12 @@ namespace AssetStudio.CLI.Properties {
         public bool enableFileLogging => AppSettings.Get("enableFileLogging", false);
         public bool minimalAssetMap => AppSettings.Get("minimalAssetMap", true);
         public bool allowDuplicates => AppSettings.Get("allowDuplicates", false);
-        public string types => AppSettings.Get("types", string.Empty);
-        public string texs => AppSettings.Get("texs", string.Empty);
-        public string uvs => AppSettings.Get("uvs", string.Empty);
+        public string types => AppSettings.Get("types", @"{""Animation"":{""Item1"":true,""Item2"":true},""AnimationClip"":{""Item1"":true,""Item2"":true},""Animator"":{""Item1"":true,""Item2"":true},""AnimatorController"":{""Item1"":true,""Item2"":true},""AnimatorOverrideController"":{""Item1"":true,""Item2"":true},""AssetBundle"":{""Item1"":true,""Item2"":false},""AudioClip"":{""Item1"":true,""Item2"":false},""Avatar"":{""Item1"":true,""Item2"":true},""Font"":{""Item1"":true,""Item2"":false},""GameObject"":{""Item1"":true,""Item2"":true},""IndexObject"":{""Item1"":true,""Item2"":false},""Material"":{""Item1"":true,""Item2"":true},""Mesh"":{""Item1"":true,""Item2"":true},""MeshFilter"":{""Item1"":true,""Item2"":true},""MeshRenderer"":{""Item1"":true,""Item2"":true},""MiHoYoBinData"":{""Item1"":true,""Item2"":true},""MonoBehaviour"":{""Item1"":true,""Item2"":true},""MonoScript"":{""Item1"":true,""Item2"":false},""MovieTexture"":{""Item1"":true,""Item2"":true},""PlayerSettings"":{""Item1"":true,""Item2"":false},""RectTransform"":{""Item1"":true,""Item2"":false},""Shader"":{""Item1"":false,""Item2"":false},""SkinnedMeshRenderer"":{""Item1"":true,""Item2"":true},""Sprite"":{""Item1"":true,""Item2"":false},""SpriteAtlas"":{""Item1"":true,""Item2"":false},""TextAsset"":{""Item1"":true,""Item2"":false},""Texture2D"":{""Item1"":true,""Item2"":true},""Transform"":{""Item1"":true,""Item2"":false},""VideoClip"":{""Item1"":true,""Item2"":false},""ResourceManager"":{""Item1"":true,""Item2"":false}}");
+        public string texs => AppSettings.Get("texs", "{}");
+        public string uvs => AppSettings.Get("uvs", "{\"UV0\":{\"Item1\":true,\"Item2\":0},\"UV1\":{\"Item1\":true,\"Item2\":1},\"UV2\":{\"Item1\":fal" +
+            "se,\"Item2\":0},\"UV3\":{\"Item1\":false,\"Item2\":0},\"UV4\":{\"Item1\":false,\"Item2\":0},\"U" +
+            "V5\":{\"Item1\":false,\"Item2\":0},\"UV6\":{\"Item1\":false,\"Item2\":0},\"UV7\":{\"Item1\":fal" +
+            "se,\"Item2\":0}}");
 
     }
 }

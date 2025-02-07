@@ -23,13 +23,15 @@ namespace AssetStudio
 
         private static string BaseFolder = "";
         private static Dictionary<string, Entry> CABMap = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        private static Dictionary<string, List<string>> FileCABMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
         private static Dictionary<string, HashSet<long>> Offsets = new Dictionary<string, HashSet<long>>();
         private static AssetsManager assetsManager = new AssetsManager() { Silent = true, SkipProcess = true, ResolveDependencies = false };
 
         public record Entry
         {
-            public string Path { get; set; }
-            public long Offset { get; set; }
+            public string Path { get; set; }// file path
+            public long Offset { get; set; }// offset in file
             public List<string> Dependencies { get; set; }
         }
 
@@ -50,6 +52,7 @@ namespace AssetStudio
         public static void Clear()
         {
             CABMap.Clear();
+            FileCABMap.Clear();
             Offsets.Clear();
             BaseFolder = string.Empty;
             assetsManager.SpecifyUnityVersion = string.Empty;
@@ -112,17 +115,59 @@ namespace AssetStudio
 
         public static string[] ProcessFiles(string[] files)
         {
+            //foreach (var file in files)
+            //{
+            //    Offsets.TryAdd(file, new HashSet<long>());
+            //    Logger.Verbose($"Added {file} to Offsets dictionary");
+            //    if (FindCAB(file, out var cabs))
+            //    {
+            //        AddCABOffsets(files, cabs);
+            //    }
+            //}
+
+            Dictionary<string, HashSet<string>> threadLocalContainer = new Dictionary<string, HashSet<string>>();
+
             foreach (var file in files)
             {
-                Offsets.TryAdd(file, new HashSet<long>());
-                Logger.Verbose($"Added {file} to Offsets dictionary");
-                if (FindCAB(file, out var cabs))
+                threadLocalContainer.TryAdd(file, new HashSet<string>());
+            }
+            files.AsParallel().ForAll(file =>
+            {
+                var relativePath = Path.GetRelativePath(BaseFolder, file);
+                if (FileCABMap.TryGetValue(relativePath, out var cabs))
                 {
-                    AddCABOffsets(files, cabs);
+                    for (int i = 0; i < cabs.Count; i++)
+                    {
+                        var cab = cabs[i];
+                        if (CABMap.TryGetValue(cab, out var entry))
+                        {
+                            var fullPath = Path.Combine(BaseFolder, entry.Path);
+                            if (!threadLocalContainer.ContainsKey(fullPath)) // 检查列表中没有这个文件
+                            {
+                                threadLocalContainer[file].Add(fullPath); // 添加到依赖列表，不需要查重，这里是HashSet
+                            }
+                            foreach (var dep in entry.Dependencies) // 将当前的依赖加入到待处理列表
+                            {
+                                if (!cabs.Contains(dep))
+                                    cabs.Add(dep);
+                            }
+                        }
+                    }
+                }
+            });
+
+            HashSet<string> result = new HashSet<string>();
+            foreach (var item in threadLocalContainer)
+            {
+                result.Add(item.Key);
+                foreach (var fullPath in item.Value)
+                {
+                    result.Add(fullPath);
                 }
             }
+
             Logger.Verbose($"Finished resolving dependncies, the original {files.Length} files will be loaded entirely, and the {Offsets.Count - files.Length} dependicnes will be loaded from cached offsets only");
-            return Offsets.Keys.ToArray();
+            return result.ToArray();
         }
 
         public static string[] ProcessDependencies(string[] files)
@@ -184,7 +229,7 @@ namespace AssetStudio
                 }
                 else
                 {
-                    filesList.Remove(file);
+                    //filesList.Remove(file);
                     msg = $"Removed {Path.GetFileName(file)}, no assets found";
                 }
                 Logger.Info($"[{i + 1}/{filesList.Count}] {msg}");
@@ -310,6 +355,9 @@ namespace AssetStudio
                     Dependencies = dependencies
                 };
                 CABMap.Add(cab, entry);
+
+                FileCABMap.TryAdd(path, new List<string>());
+                FileCABMap[path].Add(cab);
             }
         } 
 

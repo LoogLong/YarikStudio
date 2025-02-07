@@ -1975,7 +1975,7 @@ namespace AssetStudio
                 }
                 var m_AclRange = new KeyValuePair<float, float>(reader.ReadSingle(), reader.ReadSingle());
             }
-            if (version[0] > 4 || (version[0] == 4 && version[1] >= 3)) //4.3 and up
+            if (version[1] > 4 || (version[1] == 4 && version[2] >= 3)) //4.3 and up
             {
                 m_ClipBindingConstant = new AnimationClipBindingConstant(reader);
             }

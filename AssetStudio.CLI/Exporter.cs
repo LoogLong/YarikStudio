@@ -7,7 +7,7 @@ using System.Text;
 
 namespace AssetStudio.CLI
 {
-    internal static class Exporter
+    public static class Exporter
     {
         public static bool ExportTexture2D(AssetItem item, string exportPath)
         {
@@ -301,6 +301,7 @@ namespace AssetStudio.CLI
         {
             var fileName = FixFileName(item.Text);
             fullPath = Path.Combine(dir, $"{fileName}{extension}");
+            item.ExportFileName = fullPath;
             if (!File.Exists(fullPath))
             {
                 Directory.CreateDirectory(dir);
@@ -429,6 +430,85 @@ namespace AssetStudio.CLI
             }
             exportPath = exportPath + FixFileName(gameObject.m_Name) + ".fbx";
             ExportFbx(convert, exportPath);
+            return true;
+        }
+
+        public static bool ExportRootGameObjectToFbx(GameObject gameObject, string exportPath, List<AnimationClip> animationList, List<Mesh> meshes, Avatar avatar)
+        {
+            var options = new ModelConverter.Options()
+            {
+                imageFormat = Properties.Settings.Default.convertType,
+                game = Studio.Game,
+                collectAnimations = Properties.Settings.Default.collectAnimations,
+                exportMaterials = Properties.Settings.Default.exportMaterials,
+                materials = new HashSet<Material>(),
+                uvs = JsonConvert.DeserializeObject<Dictionary<string, (bool, int)>>(Properties.Settings.Default.uvs),
+                texs = JsonConvert.DeserializeObject<Dictionary<string, int>>(Properties.Settings.Default.texs),
+            };
+            var convert = new ModelConverter(gameObject, options, animationList.ToArray(), meshes.ToArray(), avatar);
+
+            if (convert.MeshList.Count == 0)
+            {
+                Logger.Info($"GameObject {gameObject.m_Name} has no mesh, skipping...");
+                return false;
+            }
+            var modelPath = exportPath + FixFileName(gameObject.m_Name) + ".fbx";
+            ExportFbx(convert, modelPath);
+
+            // error
+            //convert.animationClipHashSet.AsParallel().ForAll(x =>
+            //{
+            //    var fullPath = exportPath + FixFileName(x.m_Name) + ".anim";
+            //    var str = x.Convert();
+            //    if (string.IsNullOrEmpty(str))
+            //        return;
+            //    File.WriteAllText(fullPath, str);
+            //});
+            foreach (var animationClip in convert.animationClipHashSet) 
+            {
+                var fullPath = exportPath + FixFileName(animationClip.m_Name) + ".anim";
+                var str = animationClip.Convert();
+                if (string.IsNullOrEmpty(str))
+                    continue;
+                File.WriteAllText(fullPath, str);
+            }
+            return true;
+        }
+
+        public static bool ExportMergeGameObjectToFbx(string rootName, List<GameObject> gameObjects, string exportPath, List<AnimationClip> animationList, List<Mesh> meshes)
+        {
+            var options = new ModelConverter.Options()
+            {
+                imageFormat = Properties.Settings.Default.convertType,
+                game = Studio.Game,
+                collectAnimations = Properties.Settings.Default.collectAnimations,
+                exportMaterials = Properties.Settings.Default.exportMaterials,
+                materials = new HashSet<Material>(),
+                uvs = JsonConvert.DeserializeObject<Dictionary<string, (bool, int)>>(Properties.Settings.Default.uvs),
+                texs = JsonConvert.DeserializeObject<Dictionary<string, int>>(Properties.Settings.Default.texs),
+            };
+            var convert = new ModelConverter(rootName, gameObjects, options, animationList.ToArray(), meshes.ToArray());
+
+            if (convert.MeshList.Count == 0)
+            {
+                Logger.Info($"GameObject {rootName} has no mesh, skipping...");
+                return false;
+            }
+            exportPath = exportPath + ".fbx";
+            ExportFbx(convert, exportPath);
+            return true;
+        }
+
+
+        public static bool ExportAnimSequenceToFbx(List<AnimationClip> animationClips, string exportPath)
+        {
+            
+            return true;
+        }
+
+        public static bool ExportPrefab(GameObject gameObject, string exportPath)
+        {
+
             return true;
         }
 
