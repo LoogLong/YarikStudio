@@ -16,6 +16,7 @@ namespace AssetStudio
         private static readonly byte[] zipMagic = { 0x50, 0x4B, 0x03, 0x04 };
         private static readonly byte[] zipSpannedMagic = { 0x50, 0x4B, 0x07, 0x08 };
         private static readonly byte[] mhy0Magic = { 0x6D, 0x68, 0x79, 0x30 };
+        private static readonly byte[] mhy1Magic = { 0x6D, 0x68, 0x79, 0x31 };
         private static readonly byte[] blb2Magic = { 0x42, 0x6C, 0x62, 0x02 };
         private static readonly byte[] blb3Magic = { 0x42, 0x6C, 0x62, 0x03 };
         private static readonly byte[] narakaMagic = { 0x15, 0x1E, 0x1C, 0x0D, 0x0D, 0x23, 0x21 };
@@ -82,11 +83,11 @@ namespace AssetStudio
                             return FileType.ZipFile;
                         }
                         Logger.Verbose($"Parsed signature does not match with expected signature {Convert.ToHexString(zipMagic)} or {Convert.ToHexString(zipSpannedMagic)}");
-                        if (mhy0Magic.SequenceEqual(magic))
+                        if (mhy0Magic.SequenceEqual(magic) || mhy1Magic.SequenceEqual(magic))
                         {
                             return FileType.MhyFile;
                         }
-                        Logger.Verbose($"Parsed signature does not match with expected signature {Convert.ToHexString(mhy0Magic)}");
+                        Logger.Verbose($"Parsed signature does not match with expected signature {Convert.ToHexString(mhy0Magic)} or {Convert.ToHexString(mhy1Magic)}");
                         if (blb2Magic.SequenceEqual(magic))
                         {
                             return FileType.Blb2File;
@@ -254,6 +255,11 @@ namespace AssetStudio
                 }
                 catch (Exception) { }
                 reader.Position = 0;
+            }
+
+            if (reader.FileType == FileType.MhyFile && (game.Type.IsZZZCB2() || game.Type.IsZZZ()))
+            {
+                reader.FileType = FileType.BlockFile;
             }
 
             Logger.Verbose("No preprocessing is needed");

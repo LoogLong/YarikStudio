@@ -61,6 +61,8 @@ namespace AssetStudio
         public int m_Width;
         public int m_Height;
         public TextureFormat m_TextureFormat;
+        public int unk1;
+        public int unk2;
         public bool m_MipMap;
         public int m_MipCount;
         public GLTextureSettings m_TextureSettings;
@@ -79,6 +81,11 @@ namespace AssetStudio
                 var m_MipsStripped = reader.ReadInt32();
             }
             m_TextureFormat = (TextureFormat)reader.ReadInt32();
+            if (reader.Game.Type.IsZZZ())
+            {
+                unk1 = reader.ReadInt32();
+                unk2 = reader.ReadInt32();
+            }
             if (version[0] < 5 || (version[0] == 5 && version[1] < 2)) //5.2 down
             {
                 m_MipMap = reader.ReadBoolean();
