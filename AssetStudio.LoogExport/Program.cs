@@ -19,10 +19,10 @@ internal class Program
         var assetMapFilePath = "D:\\miHoYoExport\\ZenlessZoneZero\\zzz.map"; // object与文件的对应关系
         var cabMapFilePath = "D:\\miHoYoExport\\ZenlessZoneZero\\zzz.bin"; // 资产的依赖关系
 
-        GameType gameType = GameType.ZZZ_CB1;
+        GameType gameType = GameType.ZZZ;
         Studio.Game = new Game(gameType);
         // build asset map
-        if (true)
+        if (false)
         {
             var name = "zzz";
             var version = "";
@@ -44,10 +44,11 @@ internal class Program
 
 
         // first animation asset pass
-        bool bAnimationPass = true;
-        Dictionary<long, string> GlobalSuccessAnims = new();
+        bool bAnimationPass = false;
         if (bAnimationPass)
         {
+            Dictionary<long, string> GlobalSuccessAnims = new();
+
             Console.WriteLine("Start Export Animations...");
             var files = Directory.GetFiles(SourceGamePath, "*.blk", SearchOption.AllDirectories);
             {
@@ -56,7 +57,17 @@ internal class Program
                 List<AssetEntry> pendingExportEntries = new List<AssetEntry>();
 
                 var animEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.AnimationClip);
-                var heroAnimEntries = animEntries.AsParallel().Where(x => x.Name.StartsWith("Ani_Avatar_")).Distinct().ToList();
+                //var animFileNames = animEntries.Select(x => x.Name).Distinct().ToList();
+                //{
+                //    Console.WriteLine("ErrorAnims count:{0}", animFileNames.Count);
+                //    var settings = new JsonSerializerSettings();
+                //    settings.Converters.Add(new StringEnumConverter());
+                //    var str = JsonConvert.SerializeObject(animFileNames, Formatting.Indented, settings);
+                //    var exportFullPath = Path.Combine(ExportDir, "animFileNames.json");
+                //    File.WriteAllText(exportFullPath, str);
+                //}
+
+                var heroAnimEntries = animEntries.Where(x => x.Name.StartsWith("Avatar_")).Distinct().ToList();
                 var sourcePath = heroAnimEntries.Select(x => x.Source).Distinct().ToList();
 
                 files = sourcePath.ToArray();
@@ -193,12 +204,6 @@ internal class Program
                 File.WriteAllText(exportFullPath, str);
             }
         }
-        else
-        {
-            var exportFullPath = Path.Combine(ExportDir, "SuccessAnims.json");
-            var str = File.ReadAllText(exportFullPath);
-            GlobalSuccessAnims = JsonConvert.DeserializeObject<Dictionary<long, string>>(str);
-        }
 
 
 
@@ -210,6 +215,18 @@ internal class Program
 
             var entries = ResourceMap.GetEntries();
             var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.GameObject);
+            var pp = gameObjectEntries.ToList();
+            var gameObjectFileNames = gameObjectEntries.Select(x => x.Name).Distinct().ToList();
+            
+            {
+                Console.WriteLine("ErrorAnims count:{0}", gameObjectFileNames.Count);
+                var settings1 = new JsonSerializerSettings();
+                settings1.Converters.Add(new StringEnumConverter());
+                var str = JsonConvert.SerializeObject(gameObjectFileNames, Formatting.Indented, settings1);
+                var exportFullPath = Path.Combine(ExportDir, "gameObjectFileNames.json");
+                File.WriteAllText(exportFullPath, str);
+                return;
+            }
             var heroModelEntries = gameObjectEntries.AsParallel().Where(x => x.Name.StartsWith("Avatar_")).Distinct().ToList();
             var sourcePath = heroModelEntries.Select(x => x.Source).Distinct().ToList();
 
