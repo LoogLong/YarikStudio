@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -433,7 +434,7 @@ namespace AssetStudio.CLI
             return true;
         }
 
-        public static bool ExportRootGameObjectToFbx(GameObject gameObject, string exportPath, List<AnimationClip> animationList, List<Mesh> meshes, Avatar avatar)
+        public static bool ExportRootGameObjectToFbx(GameObject gameObject, string modelPath, Avatar avatar)
         {
             var options = new ModelConverter.Options()
             {
@@ -445,14 +446,13 @@ namespace AssetStudio.CLI
                 uvs = JsonConvert.DeserializeObject<Dictionary<string, (bool, int)>>(Properties.Settings.Default.uvs),
                 texs = JsonConvert.DeserializeObject<Dictionary<string, int>>(Properties.Settings.Default.texs),
             };
-            var convert = new ModelConverter(gameObject, options, animationList.ToArray(), meshes.ToArray(), avatar);
+            var convert = new ModelConverter(gameObject, options, avatar);
 
             if (convert.MeshList.Count == 0)
             {
                 Logger.Info($"GameObject {gameObject.m_Name} has no mesh, skipping...");
                 return false;
             }
-            var modelPath = exportPath + FixFileName(gameObject.m_Name) + ".fbx";
             ExportFbx(convert, modelPath);
 
             // error
@@ -464,14 +464,6 @@ namespace AssetStudio.CLI
             //        return;
             //    File.WriteAllText(fullPath, str);
             //});
-            foreach (var animationClip in convert.animationClipHashSet) 
-            {
-                var fullPath = exportPath + FixFileName(animationClip.m_Name) + ".anim";
-                var str = animationClip.Convert();
-                if (string.IsNullOrEmpty(str))
-                    continue;
-                File.WriteAllText(fullPath, str);
-            }
             return true;
         }
 

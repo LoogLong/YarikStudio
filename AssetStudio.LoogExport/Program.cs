@@ -7,51 +7,690 @@ using System.IO;
 using static AssetStudio.CLI.Exporter;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
+using System.Linq;
 
-string ExportDir = "D:\\genshin\\Exports";
-string SourceGamePath = "C:\\Program Files\\miHoYo Launcher\\games\\Genshin Impact Game\\YuanShen_Data";
-//string SourceGamePath = "C:\\Program Files\\miHoYo Launcher\\games\\Genshin Impact Game\\YuanShen_Data\\StreamingAssets\\AssetBundles\\blocks";
-
-var assetMapFilePath = "D:\\genshin\\genshin.map"; // object与文件的对应关系
-var cabMapFilePath = "D:\\genshin\\genshin.bin"; // 资产的依赖关系
-
-GameType gameType = GameType.GI;
-Studio.Game = new Game(gameType);
-
-// 1. load asset map
-Console.WriteLine($"Loading AssetMap...");
-ResourceMap.FromFile(assetMapFilePath);
-AssetsHelper.LoadCABMap(cabMapFilePath);
-AssetsManager assetsManager = new AssetsManager();
-assetsManager.SpecifyUnityVersion = "";
-assetsManager.Game = Studio.Game;
-assetsManager.ResolveDependencies = true;
-assetsManager.SkipProcess = false;
-assetsManager.Silent = false;
-
-
-Console.WriteLine("Start Export...");
-
-Console.WriteLine("Scanning for files...");
-var files = Directory.GetFiles(SourceGamePath, "*.blk", SearchOption.AllDirectories);
+internal class Program
 {
+    private static void ExportZZZ()
+    {
+        string ExportDir = "D:\\miHoYoExport\\ZenlessZoneZero";
+        string SourceGamePath = "D:\\ZenlessZoneZero Game\\ZenlessZoneZero_Data";
 
-    var xiangling = "C:\\Program Files\\miHoYo Launcher\\games\\Genshin Impact Game\\YuanShen_Data\\StreamingAssets\\AssetBundles\\blocks\\00\\09499318.blk";
-    List<string> dd = new();
-    dd.Add(xiangling);
-    files = dd.ToArray();
+        var assetMapFilePath = "D:\\miHoYoExport\\ZenlessZoneZero\\zzz.map"; // object与文件的对应关系
+        var cabMapFilePath = "D:\\miHoYoExport\\ZenlessZoneZero\\zzz.bin"; // 资产的依赖关系
+
+        GameType gameType = GameType.ZZZ_CB1;
+        Studio.Game = new Game(gameType);
+        // build asset map
+        if (true)
+        {
+            var name = "zzz";
+            var version = "";
+            var exportListType = ExportListType.MessagePack;
+
+            Logger.Info("Scanning for files...");
+            var files = Directory.GetFiles(SourceGamePath, "*.*", SearchOption.AllDirectories).ToArray();
+            Logger.Info($"Found {files.Length} files");
+            AssetsHelper.SetUnityVersion(version);
+            var task = AssetsHelper.BuildBoth(files, name, SourceGamePath, Studio.Game, ExportDir, exportListType);
+            task.Wait();
+            return;
+        }
+
+        // 1. load asset map
+        Console.WriteLine($"Loading AssetMap...");
+        ResourceMap.FromFile(assetMapFilePath);
+        AssetsHelper.LoadCABMap(cabMapFilePath);
+
+
+        // first animation asset pass
+        bool bAnimationPass = true;
+        Dictionary<long, string> GlobalSuccessAnims = new();
+        if (bAnimationPass)
+        {
+            Console.WriteLine("Start Export Animations...");
+            var files = Directory.GetFiles(SourceGamePath, "*.blk", SearchOption.AllDirectories);
+            {
+                var entries = ResourceMap.GetEntries();
+
+                List<AssetEntry> pendingExportEntries = new List<AssetEntry>();
+
+                var animEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.AnimationClip);
+                var heroAnimEntries = animEntries.AsParallel().Where(x => x.Name.StartsWith("Ani_Avatar_")).Distinct().ToList();
+                var sourcePath = heroAnimEntries.Select(x => x.Source).Distinct().ToList();
+
+                files = sourcePath.ToArray();
+            }
+            Console.WriteLine($"Found {files.Length} blk files");
+
+            Dictionary<long, string> ErrorAnims = new();
+            Queue<string> IgnoreAnims = new();
+
+            var fileCount = files.Length;
+            var fileIndex = 1;
+            foreach (var file in files)
+            {
+                Console.WriteLine("Process Asset File: {0} / {1}", fileIndex++, fileCount);
+
+                AssetsManager assetsManager = new AssetsManager();
+                assetsManager.SpecifyUnityVersion = "";
+                assetsManager.Game = Studio.Game;
+                assetsManager.ResolveDependencies = false;
+                assetsManager.SkipProcess = false;
+                assetsManager.Silent = true;
+                assetsManager.LoadFiles(file);
+                var relativePath = Path.GetRelativePath(SourceGamePath, file);
+
+                Console.WriteLine("\tReading Asset......");
+                Dictionary<string, AnimationClip> PendingAnims = new();
+
+
+                if (assetsManager.assetsFileList.Count > 0)
+                {
+                    List<Avatar> avatars = new List<Avatar>();
+                    List<Animator> animators = new List<Animator>();
+                    List<Animation> animations = new List<Animation>();
+
+                    foreach (var item in assetsManager.assetsFileList)
+                    {
+                        foreach (var obj in item.Objects)
+                        {
+                            switch (obj)
+                            {
+                                case AnimationClip ac:
+                                    {
+                                        if (!ac.m_Name.Contains("Ani_Avatar_"))// 过滤 只导出角色的
+                                        {
+                                            IgnoreAnims.Enqueue(ac.m_Name);
+                                            continue;
+                                        }
+                                        var exportFileName = Path.Combine(ExportDir, relativePath, item.fileName, ac.m_Name + ".anim");
+                                        if (File.Exists(exportFileName))
+                                        {
+                                            ErrorAnims.TryAdd(ac.m_PathID, exportFileName);
+                                            continue;
+                                        }
+                                        PendingAnims.TryAdd(exportFileName, ac);
+                                        GlobalSuccessAnims.TryAdd(ac.m_PathID, exportFileName);
+                                    }
+                                    break;
+                                case Avatar avatar:
+                                    avatars.Add(avatar);
+                                    break;
+                                case Animator animator:
+                                    animators.Add(animator);
+                                    break;
+                                case Animation animation:
+                                    animations.Add(animation);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+
+                    var bExport = true;
+                    if (bExport && PendingAnims.Count > 0)
+                    {
+                        Console.WriteLine("\tExport {0} Assets.....", PendingAnims.Count);
+
+                        // find tos
+                        var tos = new Dictionary<uint, string>() { { 0, string.Empty } };
+                        if (avatars.Count > 0)
+                        {
+                            foreach (var avatar in avatars)
+                            {
+                                foreach (var item in avatar.m_TOS)
+                                {
+                                    tos.TryAdd(item.Key, item.Value);
+                                }
+                            }
+                        }
+
+                        PendingAnims.AsParallel().ForAll((item) =>
+                        {
+                            var exportFileName = item.Key;
+                            var ac = item.Value;
+
+                            ac.m_TOS = tos;
+
+                            Directory.CreateDirectory(Path.GetDirectoryName(exportFileName));
+                            var str = ac.Convert();
+                            if (string.IsNullOrEmpty(str))
+                            {
+                                return;
+                            }
+                            File.WriteAllText(exportFileName, str);
+                        });
+                    }
+                }
+                assetsManager.Clear();
+            }
+
+            {
+                Console.WriteLine("IgnoreAnims count:{0}", IgnoreAnims.Count);
+                var settings = new JsonSerializerSettings();
+                settings.Converters.Add(new StringEnumConverter());
+                var str = JsonConvert.SerializeObject(IgnoreAnims, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "IgnoreAnims.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+
+            {
+                Console.WriteLine("ErrorAnims count:{0}", ErrorAnims.Count);
+                var settings = new JsonSerializerSettings();
+                settings.Converters.Add(new StringEnumConverter());
+                var str = JsonConvert.SerializeObject(ErrorAnims, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "ErrorAnims.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+            {
+                Console.WriteLine("SuccessAnims count:{0}", GlobalSuccessAnims.Count);
+                var settings = new JsonSerializerSettings();
+                settings.Converters.Add(new StringEnumConverter());
+                var str = JsonConvert.SerializeObject(GlobalSuccessAnims, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "SuccessAnims.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+        }
+        else
+        {
+            var exportFullPath = Path.Combine(ExportDir, "SuccessAnims.json");
+            var str = File.ReadAllText(exportFullPath);
+            GlobalSuccessAnims = JsonConvert.DeserializeObject<Dictionary<long, string>>(str);
+        }
+
+
+
+        // model pass
+        var bModelPass = true;
+        if (bModelPass)
+        {
+            Console.WriteLine("Start Export Models...");
+
+            var entries = ResourceMap.GetEntries();
+            var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.GameObject);
+            var heroModelEntries = gameObjectEntries.AsParallel().Where(x => x.Name.StartsWith("Avatar_")).Distinct().ToList();
+            var sourcePath = heroModelEntries.Select(x => x.Source).Distinct().ToList();
+
+            var files = sourcePath.ToArray();
+
+            Console.WriteLine($"Found {files.Length} blk files");
+
+            Queue<string> ErrorCABFiles = new();
+            Dictionary<long, string> ErrorFbxObject = new();
+            Dictionary<long, string> SuccessFbxObject = new();
+
+            var fileCount = files.Length;
+            var fileIndex = 1;
+
+            HashSet<string> LoadedFiles = new();
+
+            foreach (var file in files)
+            {
+                Console.WriteLine("Process Asset File: {0} / {1}", fileIndex++, fileCount);
+
+                if (LoadedFiles.Contains(file))
+                {
+                    continue;
+                }
+
+                AssetsManager assetsManager = new AssetsManager();
+                assetsManager.SpecifyUnityVersion = "";
+                assetsManager.Game = Studio.Game;
+                assetsManager.ResolveDependencies = true;
+                assetsManager.SkipProcess = false;
+                assetsManager.Silent = true;
+                var toLoadingFiles = assetsManager.LoadFiles(file);
+
+                foreach (var item in toLoadingFiles)
+                {
+                    LoadedFiles.Add(item);
+                }
+
+                var relativePath = Path.GetRelativePath(SourceGamePath, file);
+
+
+                Console.WriteLine("\tReading Asset......");
+                Dictionary<string, GameObject> PendingRootObjects = new();
+                if (assetsManager.assetsFileList.Count > 0)
+                {
+                    foreach (var item in assetsManager.assetsFileList)
+                    {
+                        List<GameObject> TopMostFathers = new();
+                        Avatar AvatarObj = null;
+                        foreach (var obj in item.Objects)
+                        {
+                            switch (obj)
+                            {
+                                case SkinnedMeshRenderer skinnedMeshRenderer:
+                                    {
+                                        skinnedMeshRenderer.m_GameObject.TryGet(out var gameObject);
+                                        if (gameObject == null)
+                                        {
+                                            break;
+                                        }
+                                        gameObject.m_Transform.m_Father.TryGet(out var father);
+                                        var currentTopMostTransform = gameObject.m_Transform;
+                                        while (father != null)
+                                        {
+                                            currentTopMostTransform = father;
+                                            father.m_Father.TryGet(out father);
+                                        }
+                                        if (currentTopMostTransform != null)
+                                        {
+                                            if (currentTopMostTransform.m_GameObject.TryGet(out var currentTopMost))
+                                            {
+                                                bool bHasTopMostFather = false;
+                                                foreach (var topMostFather in TopMostFathers)
+                                                {
+                                                    if (topMostFather.m_PathID == currentTopMost.m_PathID)
+                                                    {
+                                                        bHasTopMostFather = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!bHasTopMostFather)
+                                                {
+                                                    TopMostFathers.Add(currentTopMost);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case Animator animator:
+                                    {
+                                        animator.m_Avatar.TryGet(out AvatarObj);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        if (AvatarObj != null) // 只导出有动画组件的模型
+                        {
+                            if (TopMostFathers.Count == 1)
+                            {
+                                if (!TopMostFathers[0].Name.StartsWith("Avatar_"))// 过滤 只导出角色的
+                                {
+                                    continue;
+                                }
+                                var exportFileName = Path.Combine(ExportDir, relativePath, item.fileName, TopMostFathers[0].m_Name + ".fbx");
+                                if (File.Exists(exportFileName))
+                                {
+                                    ErrorFbxObject.TryAdd(TopMostFathers[0].m_PathID, exportFileName);
+                                    continue;
+                                }
+                                ExportRootGameObjectToFbx(TopMostFathers[0], exportFileName, AvatarObj);
+                                SuccessFbxObject.TryAdd(TopMostFathers[0].m_PathID, exportFileName);
+                            }
+                            else
+                            {
+                                ErrorCABFiles.Enqueue(item.fileName);
+                            }
+                        }
+                    }
+                }
+                assetsManager.Clear();
+            }
+            var settings = new JsonSerializerSettings();
+            settings.Converters.Add(new StringEnumConverter());
+            {
+                var str = JsonConvert.SerializeObject(ErrorCABFiles, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "ErrorCABFiles.json");
+                File.WriteAllText(exportFullPath, str);
+                Console.WriteLine($"ErrorCABFiles count:{0}", ErrorCABFiles.Count);
+            }
+            {
+                var str = JsonConvert.SerializeObject(ErrorFbxObject, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "ErrorFbxObject.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+            {
+                var str = JsonConvert.SerializeObject(SuccessFbxObject, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "SuccessFbxObject.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+        }
+    }
+
+    private static void ExportGI()
+    {
+        string ExportDir = "D:\\genshin\\Exports";
+        string SourceGamePath = "C:\\Program Files\\miHoYo Launcher\\games\\Genshin Impact Game\\YuanShen_Data";
+        //string SourceGamePath = "C:\\Program Files\\miHoYo Launcher\\games\\Genshin Impact Game\\YuanShen_Data\\StreamingAssets\\AssetBundles\\blocks";
+
+        var assetMapFilePath = "D:\\genshin\\genshin.map"; // object与文件的对应关系
+        var cabMapFilePath = "D:\\genshin\\genshin.bin"; // 资产的依赖关系
+
+        GameType gameType = GameType.GI;
+        Studio.Game = new Game(gameType);
+
+        // 1. load asset map
+        Console.WriteLine($"Loading AssetMap...");
+        ResourceMap.FromFile(assetMapFilePath);
+        AssetsHelper.LoadCABMap(cabMapFilePath);
+
+
+        // first animation asset pass
+        bool bAnimationPass = true;
+        Dictionary<long, string> GlobalSuccessAnims = new();
+        if (bAnimationPass)
+        {
+            Console.WriteLine("Start Export Animations...");
+            var files = Directory.GetFiles(SourceGamePath, "*.blk", SearchOption.AllDirectories);
+            {
+                var entries = ResourceMap.GetEntries();
+
+                List<AssetEntry> pendingExportEntries = new List<AssetEntry>();
+
+                var animEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.AnimationClip);
+                var heroAnimEntries = animEntries.AsParallel().Where(x => x.Name.StartsWith("Ani_Avatar_")).Distinct().ToList();
+                var sourcePath = heroAnimEntries.Select(x => x.Source).Distinct().ToList();
+
+                files = sourcePath.ToArray();
+            }
+            Console.WriteLine($"Found {files.Length} blk files");
+
+            Dictionary<long, string> ErrorAnims = new();
+            Queue<string> IgnoreAnims = new();
+
+            var fileCount = files.Length;
+            var fileIndex = 1;
+            foreach (var file in files)
+            {
+                Console.WriteLine("Process Asset File: {0} / {1}", fileIndex++, fileCount);
+
+                AssetsManager assetsManager = new AssetsManager();
+                assetsManager.SpecifyUnityVersion = "";
+                assetsManager.Game = Studio.Game;
+                assetsManager.ResolveDependencies = false;
+                assetsManager.SkipProcess = false;
+                assetsManager.Silent = true;
+                assetsManager.LoadFiles(file);
+                var relativePath = Path.GetRelativePath(SourceGamePath, file);
+
+                Console.WriteLine("\tReading Asset......");
+                Dictionary<string, AnimationClip> PendingAnims = new();
+
+
+                if (assetsManager.assetsFileList.Count > 0)
+                {
+                    List<Avatar> avatars = new List<Avatar>();
+                    List<Animator> animators = new List<Animator>();
+                    List<Animation> animations = new List<Animation>();
+
+                    foreach (var item in assetsManager.assetsFileList)
+                    {
+                        foreach (var obj in item.Objects)
+                        {
+                            switch (obj)
+                            {
+                                case AnimationClip ac:
+                                    {
+                                        if (!ac.m_Name.Contains("Ani_Avatar_"))// 过滤 只导出角色的
+                                        {
+                                            IgnoreAnims.Enqueue(ac.m_Name);
+                                            continue;
+                                        }
+                                        var exportFileName = Path.Combine(ExportDir, relativePath, item.fileName, ac.m_Name + ".anim");
+                                        if (File.Exists(exportFileName))
+                                        {
+                                            ErrorAnims.TryAdd(ac.m_PathID, exportFileName);
+                                            continue;
+                                        }
+                                        PendingAnims.TryAdd(exportFileName, ac);
+                                        GlobalSuccessAnims.TryAdd(ac.m_PathID, exportFileName);
+                                    }
+                                    break;
+                                case Avatar avatar:
+                                    avatars.Add(avatar);
+                                    break;
+                                case Animator animator:
+                                    animators.Add(animator);
+                                    break;
+                                case Animation animation:
+                                    animations.Add(animation);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+
+                    var bExport = true;
+                    if (bExport && PendingAnims.Count > 0)
+                    {
+                        Console.WriteLine("\tExport {0} Assets.....", PendingAnims.Count);
+
+                        // find tos
+                        var tos = new Dictionary<uint, string>() { { 0, string.Empty } };
+                        if (avatars.Count > 0)
+                        {
+                            foreach (var avatar in avatars)
+                            {
+                                foreach (var item in avatar.m_TOS)
+                                {
+                                    tos.TryAdd(item.Key, item.Value);
+                                }
+                            }
+                        }
+
+                        PendingAnims.AsParallel().ForAll((item) =>
+                        {
+                            var exportFileName = item.Key;
+                            var ac = item.Value;
+
+                            ac.m_TOS = tos;
+
+                            Directory.CreateDirectory(Path.GetDirectoryName(exportFileName));
+                            var str = ac.Convert();
+                            if (string.IsNullOrEmpty(str))
+                            {
+                                return;
+                            }
+                            File.WriteAllText(exportFileName, str);
+                        });
+                    }
+                }
+                assetsManager.Clear();
+            }
+
+            {
+                Console.WriteLine("IgnoreAnims count:{0}", IgnoreAnims.Count);
+                var settings = new JsonSerializerSettings();
+                settings.Converters.Add(new StringEnumConverter());
+                var str = JsonConvert.SerializeObject(IgnoreAnims, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "IgnoreAnims.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+
+            {
+                Console.WriteLine("ErrorAnims count:{0}", ErrorAnims.Count);
+                var settings = new JsonSerializerSettings();
+                settings.Converters.Add(new StringEnumConverter());
+                var str = JsonConvert.SerializeObject(ErrorAnims, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "ErrorAnims.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+            {
+                Console.WriteLine("SuccessAnims count:{0}", GlobalSuccessAnims.Count);
+                var settings = new JsonSerializerSettings();
+                settings.Converters.Add(new StringEnumConverter());
+                var str = JsonConvert.SerializeObject(GlobalSuccessAnims, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "SuccessAnims.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+        }
+        else
+        {
+            var exportFullPath = Path.Combine(ExportDir, "SuccessAnims.json");
+            var str = File.ReadAllText(exportFullPath);
+            GlobalSuccessAnims = JsonConvert.DeserializeObject<Dictionary<long, string>>(str);
+        }
+
+
+
+        // model pass
+        var bModelPass = true;
+        if (bModelPass)
+        {
+            Console.WriteLine("Start Export Models...");
+
+            var entries = ResourceMap.GetEntries();
+            var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.GameObject);
+            var heroModelEntries = gameObjectEntries.AsParallel().Where(x => x.Name.StartsWith("Avatar_")).Distinct().ToList();
+            var sourcePath = heroModelEntries.Select(x => x.Source).Distinct().ToList();
+
+            var files = sourcePath.ToArray();
+
+            Console.WriteLine($"Found {files.Length} blk files");
+
+            Queue<string> ErrorCABFiles = new();
+            Dictionary<long, string> ErrorFbxObject = new();
+            Dictionary<long, string> SuccessFbxObject = new();
+
+            var fileCount = files.Length;
+            var fileIndex = 1;
+
+            HashSet<string> LoadedFiles = new();
+
+            foreach (var file in files)
+            {
+                Console.WriteLine("Process Asset File: {0} / {1}", fileIndex++, fileCount);
+
+                if (LoadedFiles.Contains(file))
+                {
+                    continue;
+                }
+
+                AssetsManager assetsManager = new AssetsManager();
+                assetsManager.SpecifyUnityVersion = "";
+                assetsManager.Game = Studio.Game;
+                assetsManager.ResolveDependencies = true;
+                assetsManager.SkipProcess = false;
+                assetsManager.Silent = true;
+                var toLoadingFiles = assetsManager.LoadFiles(file);
+
+                foreach (var item in toLoadingFiles)
+                {
+                    LoadedFiles.Add(item);
+                }
+
+                var relativePath = Path.GetRelativePath(SourceGamePath, file);
+
+
+                Console.WriteLine("\tReading Asset......");
+                Dictionary<string, GameObject> PendingRootObjects = new();
+                if (assetsManager.assetsFileList.Count > 0)
+                {
+                    foreach (var item in assetsManager.assetsFileList)
+                    {
+                        List<GameObject> TopMostFathers = new();
+                        Avatar AvatarObj = null;
+                        foreach (var obj in item.Objects)
+                        {
+                            switch (obj)
+                            {
+                                case SkinnedMeshRenderer skinnedMeshRenderer:
+                                    {
+                                        skinnedMeshRenderer.m_GameObject.TryGet(out var gameObject);
+                                        if (gameObject == null)
+                                        {
+                                            break;
+                                        }
+                                        gameObject.m_Transform.m_Father.TryGet(out var father);
+                                        var currentTopMostTransform = gameObject.m_Transform;
+                                        while (father != null)
+                                        {
+                                            currentTopMostTransform = father;
+                                            father.m_Father.TryGet(out father);
+                                        }
+                                        if (currentTopMostTransform != null)
+                                        {
+                                            if (currentTopMostTransform.m_GameObject.TryGet(out var currentTopMost))
+                                            {
+                                                bool bHasTopMostFather = false;
+                                                foreach (var topMostFather in TopMostFathers)
+                                                {
+                                                    if (topMostFather.m_PathID == currentTopMost.m_PathID)
+                                                    {
+                                                        bHasTopMostFather = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!bHasTopMostFather)
+                                                {
+                                                    TopMostFathers.Add(currentTopMost);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case Animator animator:
+                                    {
+                                        animator.m_Avatar.TryGet(out AvatarObj);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        if (AvatarObj != null) // 只导出有动画组件的模型
+                        {
+                            if (TopMostFathers.Count == 1)
+                            {
+                                if (!TopMostFathers[0].Name.StartsWith("Avatar_"))// 过滤 只导出角色的
+                                {
+                                    continue;
+                                }
+                                var exportFileName = Path.Combine(ExportDir, relativePath, item.fileName, TopMostFathers[0].m_Name + ".fbx");
+                                if (File.Exists(exportFileName))
+                                {
+                                    ErrorFbxObject.TryAdd(TopMostFathers[0].m_PathID, exportFileName);
+                                    continue;
+                                }
+                                ExportRootGameObjectToFbx(TopMostFathers[0], exportFileName, AvatarObj);
+                                SuccessFbxObject.TryAdd(TopMostFathers[0].m_PathID, exportFileName);
+                            }
+                            else
+                            {
+                                ErrorCABFiles.Enqueue(item.fileName);
+                            }
+                        }
+                    }
+                }
+                assetsManager.Clear();
+            }
+            var settings = new JsonSerializerSettings();
+            settings.Converters.Add(new StringEnumConverter());
+            {
+                var str = JsonConvert.SerializeObject(ErrorCABFiles, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "ErrorCABFiles.json");
+                File.WriteAllText(exportFullPath, str);
+                Console.WriteLine($"ErrorCABFiles count:{0}", ErrorCABFiles.Count);
+            }
+            {
+                var str = JsonConvert.SerializeObject(ErrorFbxObject, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "ErrorFbxObject.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+            {
+                var str = JsonConvert.SerializeObject(SuccessFbxObject, Formatting.Indented, settings);
+                var exportFullPath = Path.Combine(ExportDir, "SuccessFbxObject.json");
+                File.WriteAllText(exportFullPath, str);
+            }
+        }
+    }
+    private static void Main(string[] args)
+    {
+        //ExportGI();
+        ExportZZZ();
+    }
 }
-Console.WriteLine($"Found {files.Length} files");
 
-
-HashSet<string> exportedFiles = new();// cab path
-HashSet<string> exportedAbsFiles = new();// abs path
-Dictionary<long, string> pathObjects = new();//path id->entries
-List<KeyValuePair<long, string>> dupPathIDs = new();
-
-
+/*
 {
-    HashSet<long> objectIdentity = new();//type->entries
     for (int i = 0; i < files.Length; i++)
     {
         Console.WriteLine("BuildAssetData: {0} / {1}", i + 1, files.Length);
@@ -60,7 +699,12 @@ List<KeyValuePair<long, string>> dupPathIDs = new();
         { 
             continue; 
         }
-
+        AssetsManager assetsManager = new AssetsManager();
+        assetsManager.SpecifyUnityVersion = "";
+        assetsManager.Game = Studio.Game;
+        assetsManager.ResolveDependencies = false;
+        assetsManager.SkipProcess = false;
+        assetsManager.Silent = true;
         assetsManager.LoadFiles(files[i]);
         if (assetsManager.assetsFileList.Count > 0)
         {
@@ -220,7 +864,7 @@ List<KeyValuePair<long, string>> dupPathIDs = new();
                     }
                     else
                     {
-                        ExportRootGameObjectToFbx(TopMostFathers[0], exportFullPath, clipList, meshList, AvatarObj);
+                        ExportRootGameObjectToFbx(TopMostFathers[0], exportFullPath, AvatarObj);
                     }
                 }
                 continue;
@@ -244,7 +888,7 @@ List<KeyValuePair<long, string>> dupPathIDs = new();
                             {
                                 continue;
                             }
-                            ExportRootGameObjectToFbx(TopMostFathers[0], exportFullPath, clipList, meshList, AvatarObj);
+                            ExportRootGameObjectToFbx(TopMostFathers[0], exportFullPath, AvatarObj);
                         }
                     }
                     else
@@ -320,25 +964,8 @@ List<KeyValuePair<long, string>> dupPathIDs = new();
         assetsManager.Clear();
     }
 }
+*/
 
-Console.WriteLine($"pathObjects count:{0}", pathObjects.Count);
-
-{ // write pathid map
-    var settings = new JsonSerializerSettings();
-    settings.Converters.Add(new StringEnumConverter());
-    var str = JsonConvert.SerializeObject(pathObjects, Formatting.Indented, settings);
-    var exportFullPath = Path.Combine(ExportDir, "PathIDMap.json");
-    File.WriteAllText(exportFullPath, str);
-}
-{
-    var settings = new JsonSerializerSettings();
-    settings.Converters.Add(new StringEnumConverter());
-    var str = JsonConvert.SerializeObject(dupPathIDs, Formatting.Indented, settings);
-    var exportFullPath = Path.Combine(ExportDir, "ErrorPathID.json");
-    File.WriteAllText(exportFullPath, str);
-}
-
-return;
 
 
 #if tt

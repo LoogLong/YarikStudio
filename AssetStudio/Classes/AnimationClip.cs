@@ -1832,10 +1832,13 @@ namespace AssetStudio
         public List<AnimationEvent> m_Events;
         public StreamingInfo m_StreamData;
 
+        public Dictionary<uint, string> m_TOS;
+
         private bool hasStreamingInfo = false;
 
         public AnimationClip(ObjectReader reader) : base(reader)
         {
+            m_TOS = null;
             if (version[0] >= 5)//5.0 and up
             {
                 m_Legacy = reader.ReadBoolean();

@@ -25,20 +25,13 @@ namespace AssetStudio
         private Dictionary<Transform, ImportedFrame> transformDictionary = new Dictionary<Transform, ImportedFrame>();
         Dictionary<uint, string> morphChannelNames = new Dictionary<uint, string>();
 
-        public ModelConverter(GameObject rootGameObject, Options options, AnimationClip[] animationList, Mesh[] meshList, Avatar avatar)
+        public ModelConverter(GameObject rootGameObject, Options options, Avatar avatar)
         {
             this.options = options;
             this.avatar = avatar;
 
             InitWithGameObject(rootGameObject);
 
-            if (animationList != null)
-            {
-                foreach (var animationClip in animationList)
-                {
-                    animationClipHashSet.Add(animationClip);
-                }
-            }
         }
 
         public ModelConverter(string rootName, List<GameObject> m_GameObjects, Options options, AnimationClip[] animationList, Mesh[] meshList)
