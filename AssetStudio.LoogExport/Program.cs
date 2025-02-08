@@ -8,6 +8,7 @@ using static AssetStudio.CLI.Exporter;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
 using System.Linq;
+using System.Windows.Forms;
 
 internal class Program
 {
@@ -20,7 +21,7 @@ internal class Program
         var cabMapFilePath = "D:\\miHoYoExport\\ZenlessZoneZero\\zzz.bin"; // 资产的依赖关系
 
         GameType gameType = GameType.ZZZ;
-        Studio.Game = new Game(gameType);
+        Studio.Game = GameManager.GetGame(gameType);
         // build asset map
         if (false)
         {
@@ -42,6 +43,51 @@ internal class Program
         ResourceMap.FromFile(assetMapFilePath);
         AssetsHelper.LoadCABMap(cabMapFilePath);
 
+        bool bExportList = false;
+        if (bExportList)
+        {
+            var entries = ResourceMap.GetEntries();
+            //{
+            //    var animEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.AnimationClip);
+            //    var animFileNames = animEntries.Select(x => x.Name).Distinct().ToList();
+            //    Console.WriteLine("ErrorAnims count:{0}", animFileNames.Count);
+            //    var settings = new JsonSerializerSettings();
+            //    settings.Converters.Add(new StringEnumConverter());
+            //    var str = JsonConvert.SerializeObject(animFileNames, Formatting.Indented, settings);
+            //    var exportFullPath = Path.Combine(ExportDir, "animFileNames.json");
+            //    File.WriteAllText(exportFullPath, str);
+            //}
+            //{
+            //    var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.GameObject);
+            //    var gameObjectFileNames = gameObjectEntries.Select(x => x.Name).Distinct().ToList();
+            //    Console.WriteLine("ErrorAnims count:{0}", gameObjectFileNames.Count);
+            //    var settings1 = new JsonSerializerSettings();
+            //    settings1.Converters.Add(new StringEnumConverter());
+            //    var str = JsonConvert.SerializeObject(gameObjectFileNames, Formatting.Indented, settings1);
+            //    var exportFullPath = Path.Combine(ExportDir, "gameObjectFileNames.json");
+            //    File.WriteAllText(exportFullPath, str);
+            //}
+            var meshEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.Mesh);
+            //var meshNames = meshEntries.Select(x => x.Name).Distinct().ToList();
+            Dictionary<long, string> meshNames = new Dictionary<long, string>();
+            List<string> meshNamesList = new List<string>();
+            List<long> meshPathList = new List<long>();
+            foreach ( var entry in entries)
+            {
+                if (!meshNames.TryAdd(entry.PathID, entry.Name))
+                {
+                    meshNamesList.Add(entry.Name);
+                    meshPathList.Add(entry.PathID);
+                }
+            }
+            Console.WriteLine("meshNames count:{0}", meshNames.Count);
+            var settings1 = new JsonSerializerSettings();
+            settings1.Converters.Add(new StringEnumConverter());
+            var str = JsonConvert.SerializeObject(meshNames, Formatting.Indented, settings1);
+            var exportFullPath = Path.Combine(ExportDir, "meshNames.json");
+            File.WriteAllText(exportFullPath, str);
+            return;
+        }
 
         // first animation asset pass
         bool bAnimationPass = false;
@@ -57,15 +103,7 @@ internal class Program
                 List<AssetEntry> pendingExportEntries = new List<AssetEntry>();
 
                 var animEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.AnimationClip);
-                //var animFileNames = animEntries.Select(x => x.Name).Distinct().ToList();
-                //{
-                //    Console.WriteLine("ErrorAnims count:{0}", animFileNames.Count);
-                //    var settings = new JsonSerializerSettings();
-                //    settings.Converters.Add(new StringEnumConverter());
-                //    var str = JsonConvert.SerializeObject(animFileNames, Formatting.Indented, settings);
-                //    var exportFullPath = Path.Combine(ExportDir, "animFileNames.json");
-                //    File.WriteAllText(exportFullPath, str);
-                //}
+                
 
                 var heroAnimEntries = animEntries.Where(x => x.Name.StartsWith("Avatar_")).Distinct().ToList();
                 var sourcePath = heroAnimEntries.Select(x => x.Source).Distinct().ToList();
@@ -214,27 +252,20 @@ internal class Program
             Console.WriteLine("Start Export Models...");
 
             var entries = ResourceMap.GetEntries();
-            var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.GameObject);
-            var pp = gameObjectEntries.ToList();
-            var gameObjectFileNames = gameObjectEntries.Select(x => x.Name).Distinct().ToList();
             
-            {
-                Console.WriteLine("ErrorAnims count:{0}", gameObjectFileNames.Count);
-                var settings1 = new JsonSerializerSettings();
-                settings1.Converters.Add(new StringEnumConverter());
-                var str = JsonConvert.SerializeObject(gameObjectFileNames, Formatting.Indented, settings1);
-                var exportFullPath = Path.Combine(ExportDir, "gameObjectFileNames.json");
-                File.WriteAllText(exportFullPath, str);
-                return;
-            }
-            var heroModelEntries = gameObjectEntries.AsParallel().Where(x => x.Name.StartsWith("Avatar_")).Distinct().ToList();
-            var sourcePath = heroModelEntries.Select(x => x.Source).Distinct().ToList();
+            var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.SkinnedMeshRenderer);
 
+            var pp = gameObjectEntries.ToList();
+
+            var heroModelEntries = gameObjectEntries.AsParallel().Where(x => x.Name.StartsWith("Avatar_")).Distinct().ToList();
+            var sourcePath = gameObjectEntries.Select(x => x.Source).Distinct().ToList();
+            //var files = Directory.GetFiles(SourceGamePath, "*.blk", SearchOption.AllDirectories);
             var files = sourcePath.ToArray();
 
             Console.WriteLine($"Found {files.Length} blk files");
 
             Queue<string> ErrorCABFiles = new();
+            Queue<string> RootNames = new();
             Dictionary<long, string> ErrorFbxObject = new();
             Dictionary<long, string> SuccessFbxObject = new();
 
@@ -320,6 +351,11 @@ internal class Program
                                         animator.m_Avatar.TryGet(out AvatarObj);
                                     }
                                     break;
+                                case MeshFilter meshFilter:
+                                    {
+                                        meshFilter.m_Mesh.TryGet(out var mesh);
+                                    }
+                                    break;
                                 default:
                                     break;
                             }
@@ -328,6 +364,7 @@ internal class Program
                         {
                             if (TopMostFathers.Count == 1)
                             {
+                                RootNames.Enqueue(TopMostFathers[0].m_Name);
                                 if (!TopMostFathers[0].Name.StartsWith("Avatar_"))// 过滤 只导出角色的
                                 {
                                     continue;
@@ -339,6 +376,20 @@ internal class Program
                                     continue;
                                 }
                                 ExportRootGameObjectToFbx(TopMostFathers[0], exportFileName, AvatarObj);
+                                var root = TopMostFathers[0];
+                                var comList = new List<Component>();
+                                var childGameObject = new List<GameObject>();
+                                foreach (var pPtr in root.m_Components)
+                                {
+                                    pPtr.TryGet(out var com);
+                                    comList.Add(com);
+                                }
+                                foreach (var childPtr in root.m_Transform.m_Children)
+                                {
+                                    childPtr.TryGet(out var child);
+                                    child.m_GameObject.TryGet(out var childgo);
+                                    childGameObject.Add(childgo);
+                                }
                                 SuccessFbxObject.TryAdd(TopMostFathers[0].m_PathID, exportFileName);
                             }
                             else

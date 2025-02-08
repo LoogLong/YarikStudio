@@ -25,6 +25,39 @@ namespace AssetStudio
             {
                 var m_DisableAnimationWhenOffscreen = new PPtr<Animation>(reader);
             }
+            var lastPosition = reader.Position;
+            reader.Position = reader.byteStart;
+            List<long> pendingPathIDs = new();
+            var leng = lastPosition + 50 - reader.Position;
+            for (int i = 0; i < leng; i++)
+            {
+                if (reader.Position + i + 8 < reader.Length)
+                {
+                    var m_MaterialsSize = reader.ReadBytes(i);
+                    var pathID = reader.ReadInt64();
+                    pendingPathIDs.Add(pathID);
+                    reader.Position = lastPosition;
+                }
+            }
+            {
+                var entries = ResourceMap.GetEntries();
+                var meshs = entries.AsParallel().Where(x => x.Type == ClassIDType.Mesh);
+
+                List<long> maybePathIDs = new();
+
+                foreach (var pathID in pendingPathIDs)
+                {
+                    var pp = meshs.Where(x => x.PathID == pathID).ToList();
+                    if (pp.Count > 0)
+                    {
+                        maybePathIDs.Add(pathID);
+                    }
+                }
+                if (maybePathIDs.Count > 0)
+                {
+                    var d = 1;
+                }
+            }
 
             m_Mesh = new PPtr<Mesh>(reader);
 
