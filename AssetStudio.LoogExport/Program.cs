@@ -9,16 +9,17 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Windows.Forms;
+using Object = AssetStudio.Object;
 
 internal class Program
 {
     private static void ExportZZZ()
     {
-        string ExportDir = "D:\\miHoYoExport\\ZenlessZoneZero";
-        string SourceGamePath = "D:\\ZenlessZoneZero Game\\ZenlessZoneZero_Data";
+        string ExportDir = "G:\\miHoYoGameExport";
+        string SourceGamePath = "G:\\game\\miHoYo Launcher\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data";
 
-        var assetMapFilePath = "D:\\miHoYoExport\\ZenlessZoneZero\\zzz.map"; // object与文件的对应关系
-        var cabMapFilePath = "D:\\miHoYoExport\\ZenlessZoneZero\\zzz.bin"; // 资产的依赖关系
+        var assetMapFilePath = "G:\\miHoYoGameExport\\zzz.map"; // object与文件的对应关系
+        var cabMapFilePath = "G:\\miHoYoGameExport\\zzz.bin"; // 资产的依赖关系
 
         GameType gameType = GameType.ZZZ;
         Studio.Game = GameManager.GetGame(gameType);
@@ -68,7 +69,7 @@ internal class Program
             //    File.WriteAllText(exportFullPath, str);
             //}
             var meshEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.Mesh);
-            //var meshNames = meshEntries.Select(x => x.Name).Distinct().ToList();
+            var typeNames = entries.Select(x => x.Type).Distinct().ToList();
             Dictionary<long, string> meshNames = new Dictionary<long, string>();
             List<string> meshNamesList = new List<string>();
             List<long> meshPathList = new List<long>();
@@ -253,7 +254,7 @@ internal class Program
 
             var entries = ResourceMap.GetEntries();
             
-            var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.SkinnedMeshRenderer);
+            var gameObjectEntries = entries.AsParallel().Where(x => x.Type == ClassIDType.GameObject);
 
             var pp = gameObjectEntries.ToList();
 
@@ -273,7 +274,12 @@ internal class Program
             var fileIndex = 1;
 
             HashSet<string> LoadedFiles = new();
+            var file22 = // gameobject
+                "G:\\game\\miHoYo Launcher\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\1139640540.blk";
+            var file333 = // mesh
+                "G:\\game\\miHoYo Launcher\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\195715835.blk";
 
+            files = new[] { file22 };
             foreach (var file in files)
             {
                 Console.WriteLine("Process Asset File: {0} / {1}", fileIndex++, fileCount);
@@ -289,6 +295,7 @@ internal class Program
                 assetsManager.ResolveDependencies = true;
                 assetsManager.SkipProcess = false;
                 assetsManager.Silent = true;
+                
                 var toLoadingFiles = assetsManager.LoadFiles(file);
 
                 foreach (var item in toLoadingFiles)
@@ -301,6 +308,8 @@ internal class Program
 
                 Console.WriteLine("\tReading Asset......");
                 Dictionary<string, GameObject> PendingRootObjects = new();
+                Dictionary<ClassIDType, List<Object>> typeNames = new();
+
                 if (assetsManager.assetsFileList.Count > 0)
                 {
                     foreach (var item in assetsManager.assetsFileList)
@@ -309,8 +318,19 @@ internal class Program
                         Avatar AvatarObj = null;
                         foreach (var obj in item.Objects)
                         {
+                            typeNames.TryAdd(obj.type, new List<Object>());
+                            typeNames[obj.type].Add(obj);
                             switch (obj)
                             {
+                                case PBDSkinnedMeshRenderer m:
+                                    {
+                                        m.m_GameObject.TryGet(out var gameObject);
+                                        if (gameObject == null)
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    break;
                                 case SkinnedMeshRenderer skinnedMeshRenderer:
                                     {
                                         skinnedMeshRenderer.m_GameObject.TryGet(out var gameObject);

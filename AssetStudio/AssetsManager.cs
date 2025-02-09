@@ -734,6 +734,7 @@ namespace AssetStudio
                             ClassIDType.ParticleSystem when ClassIDType.ParticleSystem.CanParse() => new ParticleSystem(objectReader),
                             ClassIDType.ParticleSystemRenderer when ClassIDType.ParticleSystemRenderer.CanParse() => new ParticleSystemRenderer(objectReader),
                             ClassIDType.TrailRenderer when ClassIDType.TrailRenderer.CanParse() => new TrailRenderer(objectReader),
+                            ClassIDType.PBDSkinnedMeshRenderer when ClassIDType.PBDSkinnedMeshRenderer.CanParse() => new PBDSkinnedMeshRenderer(objectReader),
                             _ => new Object(objectReader),
                         };
                         assetsFile.AddObject(obj);

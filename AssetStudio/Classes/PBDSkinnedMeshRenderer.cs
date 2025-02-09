@@ -5,7 +5,7 @@ using System.Text;
 
 namespace AssetStudio
 {
-    public sealed class SkinnedMeshRenderer : Renderer
+    public sealed class PBDSkinnedMeshRenderer : Renderer
     {
         public PPtr<Mesh> m_Mesh;
         public List<PPtr<Transform>> m_Bones;
@@ -14,7 +14,7 @@ namespace AssetStudio
         public AABB m_AABB;
         public bool m_DirtyAABB;
 
-        public SkinnedMeshRenderer(ObjectReader reader) : base(reader)
+        public PBDSkinnedMeshRenderer(ObjectReader reader) : base(reader)
         {
             int m_Quality = reader.ReadInt32();
             var m_UpdateWhenOffscreen = reader.ReadBoolean();
