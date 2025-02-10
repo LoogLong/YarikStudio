@@ -811,6 +811,7 @@ namespace AssetStudio
         public uint m_ConstCurveCount;
 
         public byte[] m_ClipData;
+        public byte[] m_databaseData;
 
         public override bool IsSet => !m_ClipData.IsNullOrEmpty();
         public override uint CurveCount => m_CurveCount;
@@ -820,6 +821,7 @@ namespace AssetStudio
             m_CurveCount = 0;
             m_ConstCurveCount = 0;
             m_ClipData = Array.Empty<byte>();
+            m_databaseData = Array.Empty<byte>();
         }
         public override void Read(ObjectReader reader)
         {
@@ -838,6 +840,12 @@ namespace AssetStudio
             if (reader.Game.Type.IsSRGroup())
             {
                 m_ConstCurveCount = reader.ReadUInt32();
+            }
+            if (reader.Game.Type.IsZZZ())
+            {
+                var m_databaseDataCount = reader.ReadInt32();
+                m_databaseData = reader.ReadBytes(m_databaseDataCount);
+                reader.AlignStream();
             }
         }
     }
@@ -1333,7 +1341,7 @@ namespace AssetStudio
             {
                 m_ConstantClip = new ConstantClip(reader);
             }
-            if (reader.Game.Type.IsGIGroup() || reader.Game.Type.IsBH3Group() || reader.Game.Type.IsZZZCB1())
+            if (reader.Game.Type.IsGIGroup() || reader.Game.Type.IsBH3Group() || reader.Game.Type.IsZZZCB1() || reader.Game.Type.IsZZZ())
             {
                 m_ACLClip = new MHYACLClip();
                 m_ACLClip.Read(reader);
@@ -1498,7 +1506,7 @@ namespace AssetStudio
             m_CycleOffset = reader.ReadSingle();
             m_AverageAngularSpeed = reader.ReadSingle();
 
-            if (reader.Game.Type.IsSR() && HasShortIndexArray(reader.serializedType))
+            if ((reader.Game.Type.IsSR() && HasShortIndexArray(reader.serializedType)) || reader.Game.Type.IsZZZ())
             {
                 m_IndexArray = reader.ReadInt16Array().Select(x => (int)x).ToArray();
             }
@@ -1538,6 +1546,10 @@ namespace AssetStudio
             m_KeepOriginalPositionY = reader.ReadBoolean();
             m_KeepOriginalPositionXZ = reader.ReadBoolean();
             m_HeightFromFeet = reader.ReadBoolean();
+            if (reader.Game.Type.IsZZZ())
+            {
+                var m_ReducedDeltaValue = reader.ReadBoolean();
+            }
             reader.AlignStream();
         }
         public static ClipMuscleConstant ParseGI(ObjectReader reader)
@@ -1944,7 +1956,7 @@ namespace AssetStudio
             }
             if (version[0] >= 4)//4.0 and up
             {
-                if (reader.Game.Type.IsGI())
+                if (reader.Game.Type.IsGI() || reader.Game.Type.IsZZZ())
                 {
                     var muscleClipSize = reader.ReadInt32();
                     if (muscleClipSize < 0)

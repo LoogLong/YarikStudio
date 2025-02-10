@@ -687,6 +687,7 @@ namespace AssetStudio
             //        Progress.Report(++i, progressCount);
             //    }
             //}
+            //return;
             assetsFileList.AsParallel().ForAll(assetsFile => {
                 foreach (var objectInfo in assetsFile.m_Objects)
                 {

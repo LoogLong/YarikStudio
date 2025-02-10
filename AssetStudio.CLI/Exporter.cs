@@ -434,7 +434,7 @@ namespace AssetStudio.CLI
             return true;
         }
 
-        public static bool ExportRootGameObjectToFbx(GameObject gameObject, string modelPath, Avatar avatar)
+        public static bool ExportRootGameObjectToFbx(GameObject gameObject, string modelPath, Avatar avatar, out List<PPtr<AnimationClip>> clips)
         {
             var options = new ModelConverter.Options()
             {
@@ -451,19 +451,36 @@ namespace AssetStudio.CLI
             if (convert.MeshList.Count == 0)
             {
                 Logger.Info($"GameObject {gameObject.m_Name} has no mesh, skipping...");
+                clips = new();
                 return false;
             }
             ExportFbx(convert, modelPath);
 
-            // error
-            //convert.animationClipHashSet.AsParallel().ForAll(x =>
+            // export animations 
+            //var controllerPath = Path.ChangeExtension(modelPath, "controller");
+            //Dictionary<long, string> animations = new ();
+            //Dictionary<long, string> unknowAnimations = new ();
+            //foreach (var animPtr in convert.m_AnimationClips)
             //{
-            //    var fullPath = exportPath + FixFileName(x.m_Name) + ".anim";
-            //    var str = x.Convert();
-            //    if (string.IsNullOrEmpty(str))
-            //        return;
-            //    File.WriteAllText(fullPath, str);
-            //});
+            //    if (animPtr.TryGet(out var animationClip))
+            //    {
+            //        animations.TryAdd(animationClip.m_PathID, animationClip.Name);
+
+            //    }
+            //    else
+            //    {
+            //        unknowAnimations.TryAdd(animPtr.m_PathID, animPtr.assetsFile.fullName);
+            //    }
+            //}
+            //var settings1 = new JsonSerializerSettings();
+            //settings1.Converters.Add(new StringEnumConverter());
+            //var str = JsonConvert.SerializeObject(animations, Formatting.Indented, settings1);
+            //File.WriteAllText(controllerPath, str);
+            //{
+            //    var str1 = JsonConvert.SerializeObject(unknowAnimations, Formatting.Indented, settings1);
+            //    File.WriteAllText(Path.ChangeExtension(controllerPath, "unknow"), str1);
+            //}
+            clips = convert.m_AnimationClips;
             return true;
         }
 

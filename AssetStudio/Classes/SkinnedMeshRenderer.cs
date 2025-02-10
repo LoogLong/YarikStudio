@@ -8,6 +8,7 @@ namespace AssetStudio
     public sealed class SkinnedMeshRenderer : Renderer
     {
         public PPtr<Mesh> m_Mesh;
+        public Mesh m_out_mesh;
         public List<PPtr<Transform>> m_Bones;
         public float[] m_BlendShapeWeights;
         public PPtr<Transform> m_RootBone;
@@ -74,10 +75,10 @@ namespace AssetStudio
             reader.Position += 1; // 32bit align
 
             var m_CullingDistance = reader.ReadSingle(); // size = 4
-            var m_Quality11 = reader.ReadByte(); // size = 1
+            var m_Quality11 = reader.ReadInt32(); // size = 1
             var m_UpdateWhenOffscreen11 = reader.ReadBoolean(); // size = 1
             var m_SkinnedMotionVectors11 = reader.ReadBoolean(); // size = 1
-            reader.Position += 1; // 32bit align
+            reader.Position += 2; // 32bit align
 
             m_Mesh = new PPtr<Mesh>(reader);
 

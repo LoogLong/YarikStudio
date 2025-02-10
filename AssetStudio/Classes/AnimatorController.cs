@@ -144,24 +144,24 @@ namespace AssetStudio
             m_UserID = reader.ReadUInt32();
             m_TransitionDuration = reader.ReadSingle();
             m_TransitionOffset = reader.ReadSingle();
-            if (version[0] >= 5) //5.0 and up
-            {
-                m_ExitTime = reader.ReadSingle();
-                m_HasExitTime = reader.ReadBoolean();
-                m_HasFixedDuration = reader.ReadBoolean();
-                reader.AlignStream();
-                m_InterruptionSource = reader.ReadInt32();
-                m_OrderedInterruption = reader.ReadBoolean();
-            }
-            else
-            {
-                m_Atomic = reader.ReadBoolean();
-            }
+            var m_AutoTransitionOffsetValue = reader.ReadSingle();
+            var m_AutoTransitionOffsetRatio = reader.ReadSingle();
+            m_ExitTime = reader.ReadSingle();
+            var m_FrameCount = reader.ReadInt32();
+            var m_TransitionOffsetCount = reader.ReadInt32();
+            var m_TotalFramesSrc = reader.ReadInt32();
+            var m_TotalFramesDest = reader.ReadInt32();
+            m_HasExitTime = reader.ReadBoolean(); // 1
+            var m_UseFrameCount = reader.ReadBoolean(); //1
+            m_HasFixedDuration = reader.ReadBoolean(); // 1
+            var m_AutoTransitionOffset = reader.ReadBoolean(); // 1
 
-            if (version[0] > 4 || (version[0] == 4 && version[1] >= 5)) //4.5 and up
-            {
-                m_CanTransitionToSelf = reader.ReadBoolean();
-            }
+            reader.AlignStream();
+
+            m_InterruptionSource = reader.ReadInt32();
+            m_OrderedInterruption = reader.ReadBoolean();
+            m_CanTransitionToSelf = reader.ReadBoolean();
+            var m_ListenTransition = reader.ReadBoolean();
 
             reader.AlignStream();
         }

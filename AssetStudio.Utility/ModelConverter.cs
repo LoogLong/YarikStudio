@@ -19,6 +19,7 @@ namespace AssetStudio
         private Options options;
         private Avatar avatar;
         public HashSet<AnimationClip> animationClipHashSet = new HashSet<AnimationClip>();
+        public List<PPtr<AnimationClip>> m_AnimationClips = new();
         private Dictionary<AnimationClip, string> boundAnimationPathDic = new Dictionary<AnimationClip, string>();
         private Dictionary<uint, string> bonePathHash = new Dictionary<uint, string>();
         private Dictionary<Texture2D, string> textureNameDictionary = new Dictionary<Texture2D, string>();
@@ -31,7 +32,7 @@ namespace AssetStudio
             this.avatar = avatar;
 
             InitWithGameObject(rootGameObject);
-
+            //ConvertAnimations();
         }
 
         public ModelConverter(string rootName, List<GameObject> m_GameObjects, Options options, AnimationClip[] animationList, Mesh[] meshList)
@@ -243,6 +244,7 @@ namespace AssetStudio
                                     {
                                         animationClipHashSet.Add(m_AnimationClip);
                                     }
+                                    m_AnimationClips.Add(pptr);
                                 }
                             }
                             break;
@@ -256,6 +258,7 @@ namespace AssetStudio
                                 {
                                     animationClipHashSet.Add(m_AnimationClip);
                                 }
+                                m_AnimationClips.Add(pptr);
                             }
                             break;
                         }
@@ -633,6 +636,7 @@ namespace AssetStudio
                 {
                     return m_Mesh;
                 }
+                return sMesh.m_out_mesh;
             }
             else
             {
