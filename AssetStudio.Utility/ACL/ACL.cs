@@ -111,7 +111,7 @@ namespace ACLLibs
         #region importfunctions
 
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void DecompressTracks(nint data, nint db, ref DecompressedClip decompressedClip);
+        private static extern void DecompressTracks(nint data, nint db, nint streamer, ref DecompressedClip decompressedClip);
 
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.Cdecl)]
         private static extern void Dispose(ref DecompressedClip decompressedClip);
