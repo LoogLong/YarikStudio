@@ -197,23 +197,23 @@ namespace AssetStudio
 
             if (!reader.Game.Type.IsSR() || !HasPrope(reader.serializedType))
             {
-            if (version[0] > 5 || (version[0] == 5 && version[1] >= 4)) //5.4 and up
-            {
-                var m_ProbeAnchor = new PPtr<Transform>(reader);
-                var m_LightProbeVolumeOverride = new PPtr<GameObject>(reader);
-            }
-            else if (version[0] > 3 || (version[0] == 3 && version[1] >= 5)) //3.5 - 5.3
-            {
-                var m_UseLightProbes = reader.ReadBoolean();
-                reader.AlignStream();
-
-                if (version[0] >= 5)//5.0 and up
+                if (version[0] > 5 || (version[0] == 5 && version[1] >= 4)) //5.4 and up
                 {
-                    var m_ReflectionProbeUsage = reader.ReadInt32();
+                    var m_ProbeAnchor = new PPtr<Transform>(reader);
+                    var m_LightProbeVolumeOverride = new PPtr<GameObject>(reader);
                 }
+                else if (version[0] > 3 || (version[0] == 3 && version[1] >= 5)) //3.5 - 5.3
+                {
+                    var m_UseLightProbes = reader.ReadBoolean();
+                    reader.AlignStream();
 
-                var m_LightProbeAnchor = new PPtr<Transform>(reader); //5.0 and up m_ProbeAnchor
-            }
+                    if (version[0] >= 5)//5.0 and up
+                    {
+                        var m_ReflectionProbeUsage = reader.ReadInt32();
+                    }
+
+                    var m_LightProbeAnchor = new PPtr<Transform>(reader); //5.0 and up m_ProbeAnchor
+                }
             }
 
             if (version[0] > 4 || (version[0] == 4 && version[1] >= 3)) //4.3 and up

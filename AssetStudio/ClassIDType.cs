@@ -348,6 +348,7 @@ namespace AssetStudio
         VersionControlSettings = 890905787,
         AimConstraint = 895512359,
         VFXManager = 937362698,
+        PBDSkinnedMeshRenderer = 1052674599,
         VisualEffectSubgraph = 994735392,
         VisualEffectSubgraphOperator = 994735403,
         VisualEffectSubgraphBlock = 994735404,

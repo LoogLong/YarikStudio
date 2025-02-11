@@ -50,7 +50,7 @@ namespace AssetStudio
         {
             var m_Clip = animationClip.m_MuscleClip.m_Clip;
             var bindings = animationClip.m_ClipBindingConstant;
-            var tos = animationClip.FindTOS();
+            var tos = animationClip.m_TOS ?? animationClip.FindTOS();
 
             var streamedFrames = m_Clip.m_StreamedClip.ReadData();
             var lastDenseFrame = m_Clip.m_DenseClip.m_FrameCount / m_Clip.m_DenseClip.m_SampleRate;
@@ -267,17 +267,17 @@ namespace AssetStudio
                     AddAnimatorMuscleCurve(binding, time, value);
                     break;
                 default:
-                    string attribute = m_customCurveResolver.ToAttributeName((BindingCustomType)binding.customType, binding.attribute, path);
-                    if (binding.isPPtrCurve == 0x01)
-                    {
-                        PPtrCurve curve = new PPtrCurve(path, attribute, binding.typeID, binding.script.Cast<MonoScript>());
-                        AddPPtrKeyframe(curve, bindings, time, (int)value);
-                    }
-                    else
-                    {
-                        FloatCurve curve = new FloatCurve(path, attribute, binding.typeID, binding.script.Cast<MonoScript>());
-                        AddFloatKeyframe(curve, time, value);
-                    }
+                    //string attribute = m_customCurveResolver.ToAttributeName((BindingCustomType)binding.customType, binding.attribute, path);
+                    //if (binding.isPPtrCurve == 0x01)
+                    //{
+                    //    PPtrCurve curve = new PPtrCurve(path, attribute, binding.typeID, binding.script.Cast<MonoScript>());
+                    //    AddPPtrKeyframe(curve, bindings, time, (int)value);
+                    //}
+                    //else
+                    //{
+                    //    FloatCurve curve = new FloatCurve(path, attribute, binding.typeID, binding.script.Cast<MonoScript>());
+                    //    AddFloatKeyframe(curve, time, value);
+                    //}
                     break;
             }
         }
@@ -296,9 +296,9 @@ namespace AssetStudio
                             m_translations.Add(curve, transCurve);
                         }
 
-                        float x = curveValues[offset + 0];
-                        float y = curveValues[offset + 1];
-                        float z = curveValues[offset + 2];
+                        float x = offset < curveValues.Length ? curveValues[offset + 0] : 0;
+                        float y = offset + 1 < curveValues.Length ? curveValues[offset + 1] : 0;
+                        float z = offset + 2 < curveValues.Length ? curveValues[offset + 2] : 0;
 
                         float inX = inSlopeValues[0];
                         float inY = inSlopeValues[1];
@@ -324,10 +324,10 @@ namespace AssetStudio
                             m_rotations.Add(curve, rotCurve);
                         }
 
-                        float x = curveValues[offset + 0];
-                        float y = curveValues[offset + 1];
-                        float z = curveValues[offset + 2];
-                        float w = curveValues[offset + 3];
+                        float x = offset < curveValues.Length ? curveValues[offset + 0] : 0;
+                        float y = offset + 1 < curveValues.Length ? curveValues[offset + 1] : 0;
+                        float z = offset + 2 < curveValues.Length ? curveValues[offset + 2] : 0;
+                        float w = offset + 3 < curveValues.Length ? curveValues[offset + 3] : 1;
 
                         float inX = inSlopeValues[0];
                         float inY = inSlopeValues[1];
@@ -355,9 +355,9 @@ namespace AssetStudio
                             m_scales.Add(curve, scaleCurve);
                         }
 
-                        float x = curveValues[offset + 0];
-                        float y = curveValues[offset + 1];
-                        float z = curveValues[offset + 2];
+                        float x = offset < curveValues.Length ? curveValues[offset + 0] : 1;
+                        float y = offset + 1 < curveValues.Length ? curveValues[offset + 1] : 1;
+                        float z = offset + 2 < curveValues.Length ? curveValues[offset + 2] : 1;
 
                         float inX = inSlopeValues[0];
                         float inY = inSlopeValues[1];
@@ -383,9 +383,9 @@ namespace AssetStudio
                             m_eulers.Add(curve, eulerCurve);
                         }
 
-                        float x = curveValues[offset + 0];
-                        float y = curveValues[offset + 1];
-                        float z = curveValues[offset + 2];
+                        float x = offset < curveValues.Length ? curveValues[offset + 0] : 0;
+                        float y = offset + 1 < curveValues.Length ? curveValues[offset + 1] : 0;
+                        float z = offset + 2 < curveValues.Length ? curveValues[offset + 2] : 0;
 
                         float inX = inSlopeValues[0];
                         float inY = inSlopeValues[1];

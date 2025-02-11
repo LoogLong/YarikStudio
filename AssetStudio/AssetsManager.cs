@@ -28,7 +28,7 @@ namespace AssetStudio
         internal HashSet<string> noexistFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         internal HashSet<string> assetsFileListHash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public void LoadFiles(params string[] files)
+        public string[] LoadFiles(params string[] files)
         {
             if (Silent)
             {
@@ -48,6 +48,7 @@ namespace AssetStudio
                 Logger.Silent = false;
                 Progress.Silent = false;
             }
+            return toReadFile;
         }
 
         public void LoadFolder(string path)
@@ -81,16 +82,27 @@ namespace AssetStudio
 
             Progress.Reset();
             //use a for loop because list size can change
+            //Console.WriteLine("");
+
             for (var i = 0; i < importFiles.Count; i++)
             {
+                if (!File.Exists(importFiles[i]))
+                {
+                    continue;
+                }
                 LoadFile(importFiles[i]);
                 Progress.Report(i + 1, importFiles.Count);
+
+                //Console.SetCursorPosition(0, Console.CursorTop - 1);
+                //Console.WriteLine("AssetsMansgerLoadFiles: {0} / {1}", i, importFiles.Count);
+
                 if (tokenSource.IsCancellationRequested)
                 {
                     Logger.Info("Loading files has been aborted !!");
                     break;
                 }
             }
+            //Console.SetCursorPosition(0, Console.CursorTop - 1);
 
             importFiles.Clear();
             importFilesHash.Clear();
@@ -585,7 +597,7 @@ namespace AssetStudio
 
             foreach (var assetsFile in assetsFileList)
             {
-                assetsFile.Objects.Clear();
+                //assetsFile.Objects.Clear();
                 assetsFile.reader.Close();
             }
             assetsFileList.Clear();
@@ -612,8 +624,71 @@ namespace AssetStudio
             var progressCount = assetsFileList.Sum(x => x.m_Objects.Count);
             int i = 0;
             Progress.Reset();
-            foreach (var assetsFile in assetsFileList)
-            {
+            //foreach (var assetsFile in assetsFileList)
+            //{
+            //    foreach (var objectInfo in assetsFile.m_Objects)
+            //    {
+            //        if (tokenSource.IsCancellationRequested)
+            //        {
+            //            Logger.Info("Reading assets has been cancelled !!");
+            //            return;
+            //        }
+            //        var objectReader = new ObjectReader(assetsFile.reader, assetsFile, objectInfo, Game);
+            //        try
+            //        {
+            //            Object obj = objectReader.type switch
+            //            {
+            //                ClassIDType.Animation when ClassIDType.Animation.CanParse() => new Animation(objectReader),
+            //                ClassIDType.AnimationClip when ClassIDType.AnimationClip.CanParse() => new AnimationClip(objectReader),
+            //                ClassIDType.Animator when ClassIDType.Animator.CanParse() => new Animator(objectReader),
+            //                ClassIDType.AnimatorController when ClassIDType.AnimatorController.CanParse() => new AnimatorController(objectReader),
+            //                ClassIDType.AnimatorOverrideController when ClassIDType.AnimatorOverrideController.CanParse() => new AnimatorOverrideController(objectReader),
+            //                ClassIDType.AssetBundle when ClassIDType.AssetBundle.CanParse() => new AssetBundle(objectReader),
+            //                ClassIDType.AudioClip when ClassIDType.AudioClip.CanParse() => new AudioClip(objectReader),
+            //                ClassIDType.Avatar when ClassIDType.Avatar.CanParse() => new Avatar(objectReader),
+            //                ClassIDType.Font when ClassIDType.Font.CanParse() => new Font(objectReader),
+            //                ClassIDType.GameObject when ClassIDType.GameObject.CanParse() => new GameObject(objectReader),
+            //                ClassIDType.IndexObject when ClassIDType.IndexObject.CanParse() => new IndexObject(objectReader),
+            //                ClassIDType.Material when ClassIDType.Material.CanParse() => new Material(objectReader),
+            //                ClassIDType.Mesh when ClassIDType.Mesh.CanParse() => new Mesh(objectReader),
+            //                ClassIDType.MeshFilter when ClassIDType.MeshFilter.CanParse() => new MeshFilter(objectReader),
+            //                ClassIDType.MeshRenderer when ClassIDType.MeshRenderer.CanParse() => new MeshRenderer(objectReader),
+            //                ClassIDType.MiHoYoBinData when ClassIDType.MiHoYoBinData.CanParse() => new MiHoYoBinData(objectReader),
+            //                ClassIDType.MonoBehaviour when ClassIDType.MonoBehaviour.CanParse() => new MonoBehaviour(objectReader),
+            //                ClassIDType.MonoScript when ClassIDType.MonoScript.CanParse() => new MonoScript(objectReader),
+            //                ClassIDType.MovieTexture when ClassIDType.MovieTexture.CanParse() => new MovieTexture(objectReader),
+            //                ClassIDType.PlayerSettings when ClassIDType.PlayerSettings.CanParse() => new PlayerSettings(objectReader),
+            //                ClassIDType.RectTransform when ClassIDType.RectTransform.CanParse() => new RectTransform(objectReader),
+            //                ClassIDType.Shader when ClassIDType.Shader.CanParse() => new Shader(objectReader),
+            //                ClassIDType.SkinnedMeshRenderer when ClassIDType.SkinnedMeshRenderer.CanParse() => new SkinnedMeshRenderer(objectReader),
+            //                ClassIDType.Sprite when ClassIDType.Sprite.CanParse() => new Sprite(objectReader),
+            //                ClassIDType.SpriteAtlas when ClassIDType.SpriteAtlas.CanParse() => new SpriteAtlas(objectReader),
+            //                ClassIDType.TextAsset when ClassIDType.TextAsset.CanParse() => new TextAsset(objectReader),
+            //                ClassIDType.Texture2D when ClassIDType.Texture2D.CanParse() => new Texture2D(objectReader),
+            //                ClassIDType.Transform when ClassIDType.Transform.CanParse() => new Transform(objectReader),
+            //                ClassIDType.VideoClip when ClassIDType.VideoClip.CanParse() => new VideoClip(objectReader),
+            //                ClassIDType.ResourceManager when ClassIDType.ResourceManager.CanParse() => new ResourceManager(objectReader),
+            //                _ => new Object(objectReader),
+            //            };
+            //            assetsFile.AddObject(obj);
+            //        }
+            //        catch (Exception e)
+            //        {
+            //            var sb = new StringBuilder();
+            //            sb.AppendLine("Unable to load object")
+            //                .AppendLine($"Assets {assetsFile.fileName}")
+            //                .AppendLine($"Path {assetsFile.originalPath}")
+            //                .AppendLine($"Type {objectReader.type}")
+            //                .AppendLine($"PathID {objectInfo.m_PathID}")
+            //                .Append(e);
+            //            Logger.Error(sb.ToString());
+            //        }
+
+            //        Progress.Report(++i, progressCount);
+            //    }
+            //}
+            //return;
+            assetsFileList.AsParallel().ForAll(assetsFile => {
                 foreach (var objectInfo in assetsFile.m_Objects)
                 {
                     if (tokenSource.IsCancellationRequested)
@@ -656,6 +731,11 @@ namespace AssetStudio
                             ClassIDType.Transform when ClassIDType.Transform.CanParse() => new Transform(objectReader),
                             ClassIDType.VideoClip when ClassIDType.VideoClip.CanParse() => new VideoClip(objectReader),
                             ClassIDType.ResourceManager when ClassIDType.ResourceManager.CanParse() => new ResourceManager(objectReader),
+                            ClassIDType.ShaderVariantCollection when ClassIDType.ShaderVariantCollection.CanParse() => new ShaderVariantCollection(objectReader),
+                            ClassIDType.ParticleSystem when ClassIDType.ParticleSystem.CanParse() => new ParticleSystem(objectReader),
+                            ClassIDType.ParticleSystemRenderer when ClassIDType.ParticleSystemRenderer.CanParse() => new ParticleSystemRenderer(objectReader),
+                            ClassIDType.TrailRenderer when ClassIDType.TrailRenderer.CanParse() => new TrailRenderer(objectReader),
+                            ClassIDType.PBDSkinnedMeshRenderer when ClassIDType.PBDSkinnedMeshRenderer.CanParse() => new PBDSkinnedMeshRenderer(objectReader),
                             _ => new Object(objectReader),
                         };
                         assetsFile.AddObject(obj);
@@ -671,18 +751,90 @@ namespace AssetStudio
                             .Append(e);
                         Logger.Error(sb.ToString());
                     }
-
-                    Progress.Report(++i, progressCount);
                 }
-            }
+            });
         }
 
         private void ProcessAssets()
         {
             Logger.Info("Process Assets...");
 
-            foreach (var assetsFile in assetsFileList)
-            {
+            //foreach (var assetsFile in assetsFileList)
+            //{
+            //    foreach (var obj in assetsFile.Objects)
+            //    {
+            //        if (tokenSource.IsCancellationRequested)
+            //        {
+            //            Logger.Info("Processing assets has been cancelled !!");
+            //            return;
+            //        }
+            //        if (obj is GameObject m_GameObject)
+            //        {
+            //            Logger.Verbose($"GameObject with {m_GameObject.m_PathID} in file {m_GameObject.assetsFile.fileName} has {m_GameObject.m_Components.Count} components, Attempting to fetch them...");
+            //            foreach (var pptr in m_GameObject.m_Components)
+            //            {
+            //                if (pptr.TryGet(out var m_Component))
+            //                {
+            //                    switch (m_Component)
+            //                    {
+            //                        case Transform m_Transform:
+            //                            Logger.Verbose($"Fetched Transform component with {m_Transform.m_PathID} in file {m_Transform.assetsFile.fileName}, assigning to GameObject components...");
+            //                            m_GameObject.m_Transform = m_Transform;
+            //                            break;
+            //                        case MeshRenderer m_MeshRenderer:
+            //                            Logger.Verbose($"Fetched MeshRenderer component with {m_MeshRenderer.m_PathID} in file {m_MeshRenderer.assetsFile.fileName}, assigning to GameObject components...");
+            //                            m_GameObject.m_MeshRenderer = m_MeshRenderer;
+            //                            break;
+            //                        case MeshFilter m_MeshFilter:
+            //                            Logger.Verbose($"Fetched MeshFilter component with {m_MeshFilter.m_PathID} in file {m_MeshFilter.assetsFile.fileName}, assigning to GameObject components...");
+            //                            m_GameObject.m_MeshFilter = m_MeshFilter;
+            //                            break;
+            //                        case SkinnedMeshRenderer m_SkinnedMeshRenderer:
+            //                            Logger.Verbose($"Fetched SkinnedMeshRenderer component with {m_SkinnedMeshRenderer.m_PathID} in file {m_SkinnedMeshRenderer.assetsFile.fileName}, assigning to GameObject components...");
+            //                            m_GameObject.m_SkinnedMeshRenderer = m_SkinnedMeshRenderer;
+            //                            break;
+            //                        case Animator m_Animator:
+            //                            Logger.Verbose($"Fetched Animator component with {m_Animator.m_PathID} in file {m_Animator.assetsFile.fileName}, assigning to GameObject components...");
+            //                            m_GameObject.m_Animator = m_Animator;
+            //                            break;
+            //                        case Animation m_Animation:
+            //                            Logger.Verbose($"Fetched Animation component with {m_Animation.m_PathID} in file {m_Animation.assetsFile.fileName}, assigning to GameObject components...");
+            //                            m_GameObject.m_Animation = m_Animation;
+            //                            break;
+            //                    }
+            //                }
+            //            }
+            //        }
+            //        else if (obj is SpriteAtlas m_SpriteAtlas)
+            //        {
+            //            if (m_SpriteAtlas.m_RenderDataMap.Count > 0)
+            //            {
+            //                Logger.Verbose($"SpriteAtlas with {m_SpriteAtlas.m_PathID} in file {m_SpriteAtlas.assetsFile.fileName} has {m_SpriteAtlas.m_PackedSprites.Count} packed sprites, Attempting to fetch them...");
+            //                foreach (var m_PackedSprite in m_SpriteAtlas.m_PackedSprites)
+            //                {
+            //                    if (m_PackedSprite.TryGet(out var m_Sprite))
+            //                    {
+            //                        if (m_Sprite.m_SpriteAtlas.IsNull)
+            //                        {
+            //                            Logger.Verbose($"Fetched Sprite with {m_Sprite.m_PathID} in file {m_Sprite.assetsFile.fileName}, assigning to parent SpriteAtlas...");
+            //                            m_Sprite.m_SpriteAtlas.Set(m_SpriteAtlas);
+            //                        }
+            //                        else
+            //                        {
+            //                            m_Sprite.m_SpriteAtlas.TryGet(out var m_SpriteAtlaOld);
+            //                            if (m_SpriteAtlaOld.m_IsVariant)
+            //                            {
+            //                                Logger.Verbose($"Fetched Sprite with {m_Sprite.m_PathID} in file {m_Sprite.assetsFile.fileName} has a variant of the origianl SpriteAtlas, disposing of the variant and assinging to the parent SpriteAtlas...");
+            //                                m_Sprite.m_SpriteAtlas.Set(m_SpriteAtlas);
+            //                            }
+            //                        }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+            assetsFileList.AsParallel().ForAll(assetsFile => {
                 foreach (var obj in assetsFile.Objects)
                 {
                     if (tokenSource.IsCancellationRequested)
@@ -702,27 +854,27 @@ namespace AssetStudio
                                     case Transform m_Transform:
                                         Logger.Verbose($"Fetched Transform component with {m_Transform.m_PathID} in file {m_Transform.assetsFile.fileName}, assigning to GameObject components...");
                                         m_GameObject.m_Transform = m_Transform;
-                                            break;
+                                        break;
                                     case MeshRenderer m_MeshRenderer:
                                         Logger.Verbose($"Fetched MeshRenderer component with {m_MeshRenderer.m_PathID} in file {m_MeshRenderer.assetsFile.fileName}, assigning to GameObject components...");
                                         m_GameObject.m_MeshRenderer = m_MeshRenderer;
-                                            break;
+                                        break;
                                     case MeshFilter m_MeshFilter:
                                         Logger.Verbose($"Fetched MeshFilter component with {m_MeshFilter.m_PathID} in file {m_MeshFilter.assetsFile.fileName}, assigning to GameObject components...");
                                         m_GameObject.m_MeshFilter = m_MeshFilter;
-                                            break;
+                                        break;
                                     case SkinnedMeshRenderer m_SkinnedMeshRenderer:
                                         Logger.Verbose($"Fetched SkinnedMeshRenderer component with {m_SkinnedMeshRenderer.m_PathID} in file {m_SkinnedMeshRenderer.assetsFile.fileName}, assigning to GameObject components...");
                                         m_GameObject.m_SkinnedMeshRenderer = m_SkinnedMeshRenderer;
-                                            break;
+                                        break;
                                     case Animator m_Animator:
                                         Logger.Verbose($"Fetched Animator component with {m_Animator.m_PathID} in file {m_Animator.assetsFile.fileName}, assigning to GameObject components...");
                                         m_GameObject.m_Animator = m_Animator;
-                                            break;
+                                        break;
                                     case Animation m_Animation:
                                         Logger.Verbose($"Fetched Animation component with {m_Animation.m_PathID} in file {m_Animation.assetsFile.fileName}, assigning to GameObject components...");
                                         m_GameObject.m_Animation = m_Animation;
-                                            break;
+                                        break;
                                 }
                             }
                         }
@@ -755,7 +907,7 @@ namespace AssetStudio
                         }
                     }
                 }
-            }
+            });
         }
     }
 }

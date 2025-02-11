@@ -22,7 +22,7 @@ namespace AssetStudio.CLI
         All = Both | Load,
     }
 
-    internal static class Studio
+    public static class Studio
     {
         public static Game Game;
         public static bool SkipContainer = false;
@@ -361,7 +361,7 @@ namespace AssetStudio.CLI
             }
         }
 
-        public static void ExportAssets(string savePath, List<AssetItem> toExportAssets, AssetGroupOption assetGroupOption, ExportType exportType)
+        public static void ExportAssets(string savePath, List<AssetItem> toExportAssets, AssetGroupOption assetGroupOption, ExportType exportType, string SourceGamePath = "")
         {
             int toExportCount = toExportAssets.Count;
             int exportedCount = 0;
@@ -392,6 +392,10 @@ namespace AssetStudio.CLI
                         {
                             exportPath = Path.Combine(savePath, Path.GetFileName(asset.SourceFile.originalPath) + "_export", asset.SourceFile.fileName);
                         }
+                        break;
+                    case AssetGroupOption.ByFileName:
+                        var RelativePath = Path.GetRelativePath(SourceGamePath, asset.SourceFile.fullName);
+                        exportPath = Path.Combine(savePath, RelativePath);
                         break;
                     default:
                         exportPath = savePath;

@@ -9,7 +9,7 @@ namespace AssetStudio
         public int m_FileID;
         public long m_PathID;
 
-        private SerializedFile assetsFile;
+        public SerializedFile assetsFile;
         private int index = -2; //-2 - Prepare, -1 - Missing
         
         public string Name => TryGet(out var obj) ? obj.Name : string.Empty;
@@ -62,7 +62,7 @@ namespace AssetStudio
                     }
                 }
 
-                if (index >= 0)
+                if (index >= 0 && index < assetsFileList.Count)
                 {
                     result = assetsFileList[index];
                     return true;
