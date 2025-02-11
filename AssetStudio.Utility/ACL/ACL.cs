@@ -94,7 +94,8 @@ namespace ACLLibs
             var dbAligned = new IntPtr(16 * (((long)dbPtr + 15) / 16));
             Marshal.Copy(db, 0, dbAligned, db.Length);
 
-            DecompressTracks(dataAligned, dbAligned, ref decompressedClip);
+            var streamer = new IntPtr(0);
+            DecompressTracks(dataAligned, dbAligned, streamer, ref decompressedClip);
 
             Marshal.FreeHGlobal(dataPtr);
             Marshal.FreeHGlobal(dbPtr);
